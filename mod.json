@@ -1,0 +1,18 @@
+{
+  "name": "ve-addon-momiji",
+  "displayName": "VE Addon: MomijiAdd",
+  "author": "[sky[]]Momiji142857[white[]]",
+  "version": "0.1",
+  "minGameVersion": "154",
+
+  "subtitle": "Vanilla Expansion 模组的个人向内容扩展附属",
+  "description": "[#90DBFF[]]Vanilla Expansion (VE) 原版扩展[white[]]的个人向内容扩展附属\nA personal content add‑on for [#90DBFF[]]Vanilla Expansion[white[]] (VE)\n\n[red[]]需先启用 Vanilla Expansion 模组。\nRequires Vanilla Expansion to be enabled.[white[]]\n\n本模组在VE本体的基础上添加了一些实用的内容，可能会降低游戏难度或破坏平衡，建议对VE本体足够熟悉后再使用。\nThis mod adds some practical content on top of VE, which may reduce difficulty or affect game balance. It is recommended to be used after getting familiar with VE.\n\n[accent[]]最后更新 / Last updated: 2026-06-26[white[]]",
+
+  "hidden": false,
+  "java": true,
+  "main": "ve.addon.momiji.ModLoad",
+  "dependencies": [
+    "ve"
+  ],
+  "repo": "Momiji142857/ve-addon-MomijiAdd"
+}
