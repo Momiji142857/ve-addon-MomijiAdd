@@ -3,27 +3,16 @@ package ve.addon.momiji.content;
 import arc.struct.Seq;
 import arc.util.Log;
 import arc.util.Nullable;
-import mindustry.Vars;
 import mindustry.content.Blocks;
 import mindustry.content.TechTree;
-import mindustry.ctype.ContentType;
 import mindustry.ctype.UnlockableContent;
 import mindustry.game.Objectives;
-import mindustry.type.Item;
-import mindustry.world.Block;
 
 import static mindustry.content.TechTree.node;
 
 public class AddTechTree {
 
-    static Block coreNucleusRoot = Vars.content.getByName(ContentType.block, "ve-core-nucleus-root"),
-            railJunction = Vars.content.getByName(ContentType.block, "ve-rail-junction"),
-            fluidJunction = Vars.content.getByName(ContentType.block, "ve-fluid-junction"),
-            beamDrill = Vars.content.getByName(ContentType.block, "ve-beam-drill");
-
     public static void load() {
-        Log.info("Loading Tech Tree: @", fluidJunction);
-
         // Serpulo
         addAfter(
                 Blocks.coreShard,
@@ -31,16 +20,27 @@ public class AddTechTree {
                 node(AddBlocks.itemLiquidJunction, Seq.with(new Objectives.Research(Blocks.junction)), () -> {})
         );
 
-        /*
+        // cyclant
         addAfter(
-                fluidJunction,
-                node(AddBlocks.railLiquidJunction, Seq.with(new Objectives.Research(railJunction)), () -> {})
+                VeContent.coreNucleusRoot,
+                VeContent.fluidJunction,
+                node(AddBlocks.railLiquidJunction, Seq.with(new Objectives.Research(VeContent.railJunction)), () -> {})
         );
         addAfter(
-                beamDrill,
-                node(AddBlocks.beamDrillPro, Seq.with(new Objectives.Research(railJunction)), () -> {})
+                VeContent.coreNucleusRoot,
+                VeContent.beamDrill,
+                node(AddBlocks.beamDrillPro)
         );
-        */
+        addAfter(
+                VeContent.coreNucleusRoot,
+                VeContent.platformTheta,
+                node(AddBlocks.platformThetaPro)
+        );
+        addAfter(
+                VeContent.coreNucleusRoot,
+                VeContent.platformLambda,
+                node(AddBlocks.platformLambdaPro)
+        );
     }
 
     /**
@@ -51,15 +51,18 @@ public class AddTechTree {
      */
     private static void addAfter(UnlockableContent c, TechTree.TechNode newNode) {
         if (c == null) {
-            throw new IllegalArgumentException("父节点内容不能为空");
+            Log.err("AddTechTree: 父节点内容不能为空: ", c);
+            return;
         }
         if (newNode == null) {
-            throw new IllegalArgumentException("新节点不能为空");
+            Log.err("AddTechTree: 新节点不能为空: ", newNode);
+            return;
         }
 
         TechTree.TechNode parent = TechTree.all.find(t -> t.content == c);
         if (parent == null) {
-            throw new IllegalArgumentException("未找到父节点, 预期解锁内容: " + c);
+            Log.err("AddTechTree: 未找到父节点, 预期解锁内容: " + c);
+            return;
         }
 
         parent.children.add(newNode);
@@ -75,24 +78,29 @@ public class AddTechTree {
      */
     private static void addAfter(UnlockableContent r, UnlockableContent c, TechTree.TechNode newNode) {
         if (r == null) {
-            throw new IllegalArgumentException("根节点内容不能为空");
+            Log.err("AddTechTree: 根节点内容不能为空: ", r);
+            return;
         }
         if (c == null) {
-            throw new IllegalArgumentException("父节点内容不能为空");
+            Log.err("AddTechTree: 父节点内容不能为空: ", c);
+            return;
         }
         if (newNode == null) {
-            throw new IllegalArgumentException("新节点不能为空");
+            Log.err("AddTechTree: 新节点不能为空: ", newNode);
+            return;
         }
 
         // 从根列表中直接查找
         TechTree.TechNode root = TechTree.roots.find(t -> t.content == r);
         if (root == null) {
-            throw new IllegalArgumentException("未找到根节点, 预期解锁内容: " + r);
+            Log.err("未找到根节点, 预期解锁内容: " + r);
+            return;
         }
 
         TechTree.TechNode parent = findNode(root, c);
         if (parent == null) {
-            throw new IllegalArgumentException("未找到父节点, 预期解锁内容: " + c + " (在根节点 " + r + " 下)");
+            Log.err("未找到父节点, 预期解锁内容: " + c + " (在根节点 " + r + " 下)");
+            return;
         }
 
         parent.children.add(newNode);
