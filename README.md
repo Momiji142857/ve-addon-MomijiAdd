@@ -12,8 +12,8 @@ This mod adds some extra content on top of the Vanilla Expansion mod, based on p
 - [Momiji142857](https://github.com/Momiji142857) — Author of this add‑on
 
 ## Version
-- Add‑on version: v0.1
-- Last updated: 2026-06-26
+- Add‑on version: v0.3
+- Last updated: 2026-07-15
 
 ## Compatibility
 - Mindustry >= v154

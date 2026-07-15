@@ -23,8 +23,8 @@ public class AddTechTree {
         // cyclant
         addAfter(
                 VeContent.coreNucleusRoot,
-                VeContent.fluidJunction,
-                node(AddBlocks.railLiquidJunction, Seq.with(new Objectives.Research(VeContent.railJunction)), () -> {})
+                VeContent.powerDrill,
+                node(AddBlocks.powerDrillPro)
         );
         addAfter(
                 VeContent.coreNucleusRoot,
@@ -33,8 +33,28 @@ public class AddTechTree {
         );
         addAfter(
                 VeContent.coreNucleusRoot,
-                VeContent.platformTheta,
-                node(AddBlocks.platformThetaPro)
+                VeContent.fluidJunction,
+                node(AddBlocks.railLiquidJunction, Seq.with(new Objectives.Research(VeContent.railJunction)), () -> {})
+        );
+        addAfter(
+                VeContent.coreNucleusRoot,
+                VeContent.railUnloader,
+                node(AddBlocks.isomorphicUnloader)
+        );
+        addAfter(
+                VeContent.coreNucleusRoot,
+                VeContent.saltElectrolyzer,
+                node(AddBlocks.saltElectrolyzerPro)
+        );
+        addAfter(
+                VeContent.coreNucleusRoot,
+                VeContent.saltElectrolyzer,
+                node(AddBlocks.saltElectrolyzerPro)
+        );
+        addAfter(
+                VeContent.coreNucleusRoot,
+                VeContent.blaster,
+                node(AddBlocks.sandHoter, Seq.with(new Objectives.Research(VeContent.lavaCooler)), () -> {})
         );
         addAfter(
                 VeContent.coreNucleusRoot,

@@ -12,11 +12,11 @@
 - [Momiji142857](https://github.com/Momiji142857) — 本附属作者
 
 ## 版本
-- 附属版本: v0.1
-- 最后更新: 2026-06-26
+- 附属版本: v0.3
+- 最后更新: 2026-07-15
 
 ## 兼容性
-- Mindustry 游戏版本 >= v154
+- Mindustry 游戏版本 >= v159
 - Vanilla Expansion (VE) – 建议使用最新版
 
 ## 问题反馈

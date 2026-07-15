@@ -9,6 +9,7 @@ import mindustry.ctype.ContentType;
 import mindustry.ctype.MappableContent;
 import mindustry.type.*;
 import mindustry.world.Block;
+import mindustry.world.blocks.production.AttributeCrafter;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.blocks.units.UnitCargoLoader;
 import mindustry.world.draw.*;
@@ -17,11 +18,15 @@ public class VeContent {
 
     public static Item aluminium, quartz, catalyzon, silicide, salt, chromium;
 
-    public static Liquid chlorine;
+    public static Liquid lava, chlorine;
 
     public static UnitType thetaTether, lambdaTether;
 
-    public static Block coreNucleusRoot, beamDrill, railJunction, fluidJunction, platformTheta, platformLambda;
+    public static Block coreNucleusRoot,
+            powerDrill, beamDrill,
+            railJunction, fluidJunction, railUnloader,
+            saltElectrolyzer, blaster, lavaCooler,
+            platformTheta, platformLambda;
 
     public static Planet cyclant, phoon, maress, thavina;
 
@@ -35,6 +40,7 @@ public class VeContent {
         chromium = VeLoad(ContentType.item, "chromium");
 
         // Liquids
+        lava = VeLoad(ContentType.liquid, "lava");
         chlorine = VeLoad(ContentType.liquid, "chlorine");
 
         // UnitType
@@ -42,10 +48,16 @@ public class VeContent {
         lambdaTether = VeLoad(ContentType.unit, "lambda-tether");
 
         // Blocks
-        coreNucleusRoot = VeLoad(ContentType.block, "core-nucleus-root");
         railJunction = VeLoad(ContentType.block, "rail-junction");
-        fluidJunction = VeLoad(ContentType.block, "fluid-junction");
+
+        coreNucleusRoot = VeLoad(ContentType.block, "core-nucleus-root");
+        powerDrill = VeLoad(ContentType.block, "power-drill");
         beamDrill = VeLoad(ContentType.block, "beam-drill");
+        fluidJunction = VeLoad(ContentType.block, "fluid-junction");
+        railUnloader = VeLoad(ContentType.block, "rail-unloader");
+        saltElectrolyzer = VeLoad(ContentType.block, "salt-electrolyzer");
+        blaster = VeLoad(ContentType.block, "blaster");
+        lavaCooler = VeLoad(ContentType.block, "lava-cooler");
         platformTheta = VeLoad(ContentType.block, "platform-theta");
         platformLambda = VeLoad(ContentType.block, "platform-lambda");
 
@@ -57,6 +69,10 @@ public class VeContent {
 
 
         AddBlocks.railLiquidJunction.requirements = ItemStack.with(Items.graphite, 4, aluminium, 14);
+
+        AddBlocks.isomorphicUnloader.requirements = ItemStack.with(Items.silicon, 30, aluminium, 40);
+
+        AddBlocks.powerDrillPro.requirements = ItemStack.with(Items.metaglass, 2, Items.graphite, 20, Items.silicon, 3, aluminium, 24);
 
         AddBlocks.beamDrillPro.requirements = ItemStack.with(Items.lead, 60, Items.graphite, 60, Items.metaglass, 30,  Items.silicon, 35, quartz, 55, catalyzon, 10);
 
@@ -89,6 +105,10 @@ public class VeContent {
                 }}
         );
         saltElectrolyzerPro.shownPlanets.addAll(cyclant, phoon, maress, thavina);
+
+        AttributeCrafter sandHoter = (AttributeCrafter) AddBlocks.sandHoter;
+        sandHoter.requirements = ItemStack.with(Items.graphite, 100, Items.metaglass, 40, Items.silicon, 40, aluminium, 30);
+        sandHoter.outputLiquids = LiquidStack.with(lava, 8f / 60f);
 
         UnitCargoLoader platformThetaPro = (UnitCargoLoader) AddBlocks.platformThetaPro;
         platformThetaPro.requirements = ItemStack.with(Items.lead, 160, Items.silicon, 100, aluminium, 200);
