@@ -33,6 +33,7 @@ public class ItemLiquidJunction extends LiquidJunction {
 
     public ItemLiquidJunction(String name){
         super(name);
+        update = true;
         solid = false;
         underBullets = true;
         group = BlockGroup.transportation;
