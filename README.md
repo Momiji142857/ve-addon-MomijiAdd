@@ -13,10 +13,10 @@ This mod adds some extra content on top of the Vanilla Expansion mod, based on p
 
 ## Version
 - Add‑on version: v0.3
-- Last updated: 2026-07-15
+- Last updated: 2026-07-22
 
 ## Compatibility
-- Mindustry >= v154
+- Mindustry >= v159
 - Vanilla Expansion (VE) – latest version recommended
 
 ## Reporting Issues
