@@ -18,6 +18,7 @@ import mindustry.world.draw.*;
 import mindustry.world.meta.BlockGroup;
 import ve.addon.momiji.AddType.ItemLiquidJunction;
 import ve.addon.momiji.AddType.LinkedDrill;
+import ve.addon.momiji.AddType.OmniCrafter;
 
 import static mindustry.type.ItemStack.with;
 
@@ -26,7 +27,7 @@ public class AddBlocks {
     public static Block itemLiquidJunction,
             powerDrillPro, beamDrillPro,
             railLiquidJunction, isomorphicUnloader,
-            saltElectrolyzerPro, sandHoter,
+            cellLaboratoryPro, saltElectrolyzerPro, sandHoter,
             platformThetaPro, platformLambdaPro;
 
     public static void load() {
@@ -106,8 +107,64 @@ public class AddBlocks {
             researchCostMultiplier = 0.02f;
         }};
 
+        cellLaboratoryPro = new OmniCrafter("cell-laboratory-pro") {{
+            requirements(Category.crafting, ItemStack.with(Items.metaglass, 80, Items.graphite, 200, Items.silicon, 320));
+            heatRequirement = 0f;
+            dumpExtraItem = true;
+            consumePower(200f / 60f);
+            baseExplosiveness = 1f;
+            hasItems = true;
+            hasLiquids = true;
+            hasPower = true;
+            // craftEffect = Fx.shockwave;
+            updateEffect = Fx.smeltsmoke;
+            liquidCapacity = 120f;
+            itemCapacity = 50;
+            craftTime = 60f;
+            size = 4;
+            ambientSound = Sounds.loopBio;
+            ambientSoundVolume = 0.2f;
+            legacyReadWarmup = true;
+            researchCostMultiplier = 0.01f;
+            drawer = new DrawMulti(
+                    new DrawRegion("-bottom"),
+                    new DrawLiquidTile(Liquids.water),
+                    new DrawCultivator() {{
+                        plantColorLight = Color.valueOf("e16049");
+                        plantColor = Color.valueOf("ba352b");
+                        bottomColor = Color.valueOf("892018");
+                    }},
+                    new DrawRegion("-rotator") {{
+                        rotateSpeed = -3f;
+                        x = -9f;
+                        y = 9f;
+                    }},
+                    new DrawRegion("-rotator") {{
+                        rotateSpeed = -3f;
+                        x = 9f;
+                        y = 9f;
+                    }},
+                    new DrawRegion("-rotator") {{
+                        rotateSpeed = -3f;
+                        x = -9f;
+                        y = -9f;
+                    }},
+                    new DrawRegion("-rotator") {{
+                        rotateSpeed = -3f;
+                        x = 9f;
+                        y = -9f;
+                    }},
+                    new DrawRegion(),
+                    new DrawGlowRegion("-glow") {{
+                        color = Color.valueOf("ff8a67");
+                        alpha = 0.6f;
+                    }}
+            );
+            hideDetails = false;
+        }};
+
         saltElectrolyzerPro = new GenericCrafter("salt-electrolyzer-pro") {{
-            requirements(Category.crafting, ItemStack.with(Items.graphite, 30, Items.metaglass, 40));
+            requirements(Category.crafting, ItemStack.with(Items.metaglass, 40, Items.graphite, 30));
             size = 2;
             craftTime = 60f;
             group = BlockGroup.liquids;

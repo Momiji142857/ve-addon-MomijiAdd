@@ -13,10 +13,11 @@ import mindustry.world.blocks.production.AttributeCrafter;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.blocks.units.UnitCargoLoader;
 import mindustry.world.draw.*;
+import ve.addon.momiji.AddType.OmniCrafter;
 
 public class VeContent {
 
-    public static Item aluminium, quartz, catalyzon, silicide, salt, chromium;
+    public static Item aluminium, quartz, catalyzon, silicide, salt, plantMatter, chromium, nitroalkoss;
 
     public static Liquid lava, chlorine;
 
@@ -25,7 +26,7 @@ public class VeContent {
     public static Block coreNucleusRoot,
             powerDrill, beamDrill,
             railJunction, fluidJunction, railUnloader,
-            saltElectrolyzer, blaster, lavaCooler,
+            cellLaboratory, saltElectrolyzer, blaster, lavaCooler,
             platformTheta, platformLambda;
 
     public static Planet cyclant, phoon, maress, thavina;
@@ -37,7 +38,9 @@ public class VeContent {
         catalyzon = VeLoad(ContentType.item, "catalyzon");
         silicide = VeLoad(ContentType.item, "silicide");
         salt = VeLoad(ContentType.item, "salt");
+        plantMatter = VeLoad(ContentType.item, "plant-matter");
         chromium = VeLoad(ContentType.item, "chromium");
+        nitroalkoss = VeLoad(ContentType.item, "nitroalkoss");
 
         // Liquids
         lava = VeLoad(ContentType.liquid, "lava");
@@ -55,6 +58,7 @@ public class VeContent {
         beamDrill = VeLoad(ContentType.block, "beam-drill");
         fluidJunction = VeLoad(ContentType.block, "fluid-junction");
         railUnloader = VeLoad(ContentType.block, "rail-unloader");
+        cellLaboratory = VeLoad(ContentType.block, "cell-laboratory");
         saltElectrolyzer = VeLoad(ContentType.block, "salt-electrolyzer");
         blaster = VeLoad(ContentType.block, "blaster");
         lavaCooler = VeLoad(ContentType.block, "lava-cooler");
@@ -76,8 +80,16 @@ public class VeContent {
 
         AddBlocks.beamDrillPro.requirements = ItemStack.with(Items.lead, 60, Items.graphite, 60, Items.metaglass, 30,  Items.silicon, 35, quartz, 55, catalyzon, 10);
 
+        OmniCrafter cellLaboratoryPro = (OmniCrafter) AddBlocks.cellLaboratoryPro;
+        cellLaboratoryPro.requirements = ItemStack.with(Items.metaglass, 80, Items.graphite, 200, Items.silicon, 320, catalyzon, 50, chromium, 400);
+        cellLaboratoryPro.randomResults = ItemStack.with(nitroalkoss, 1, Items.sporePod, 5, plantMatter, 5);
+        cellLaboratoryPro.emptyWeight = 49;
+        cellLaboratoryPro.consumeItems(ItemStack.with(Items.sporePod, 1, plantMatter, 1));
+        cellLaboratoryPro.consumeLiquid(Liquids.water, 10f / 60f);
+        cellLaboratoryPro.init();
+
         GenericCrafter saltElectrolyzerPro = (GenericCrafter) AddBlocks.saltElectrolyzerPro;
-        saltElectrolyzerPro.requirements = ItemStack.with(Items.graphite, 30, Items.metaglass, 40, catalyzon, 10, chromium, 40);
+        saltElectrolyzerPro.requirements = ItemStack.with(Items.metaglass, 40, Items.graphite, 30, catalyzon, 10, chromium, 40);
         saltElectrolyzerPro.consumeItem(salt, 3);
         saltElectrolyzerPro.outputLiquids = LiquidStack.with(Liquids.water, 0f, chlorine, 9f / 60f, Liquids.hydrogen, 9f/60f);
         saltElectrolyzerPro.drawer = new DrawMulti(

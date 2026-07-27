@@ -43,8 +43,8 @@ public class AddTechTree {
         );
         addAfter(
                 VeContent.coreNucleusRoot,
-                VeContent.saltElectrolyzer,
-                node(AddBlocks.saltElectrolyzerPro)
+                VeContent.cellLaboratory,
+                node(AddBlocks.cellLaboratoryPro)
         );
         addAfter(
                 VeContent.coreNucleusRoot,
@@ -55,6 +55,11 @@ public class AddTechTree {
                 VeContent.coreNucleusRoot,
                 VeContent.blaster,
                 node(AddBlocks.sandHoter, Seq.with(new Objectives.Research(VeContent.lavaCooler)), () -> {})
+        );
+        addAfter(
+                VeContent.coreNucleusRoot,
+                VeContent.platformTheta,
+                node(AddBlocks.platformThetaPro)
         );
         addAfter(
                 VeContent.coreNucleusRoot,
