@@ -23,11 +23,12 @@ public class VeContent {
 
     public static UnitType thetaTether, lambdaTether;
 
-    public static Block coreNucleusRoot,
+    public static Block coreNucleusRoot, isomorphicCoreShard,
             powerDrill, beamDrill,
             railJunction, fluidJunction, railUnloader,
-            cellLaboratory, saltElectrolyzer, blaster, lavaCooler,
-            platformTheta, platformLambda;
+            cellLaboratory, saltElectrolyzer, blaster, lavaCooler
+
+            ;
 
     public static Planet cyclant, phoon, maress, thavina;
 
@@ -54,6 +55,7 @@ public class VeContent {
         railJunction = VeLoad(ContentType.block, "rail-junction");
 
         coreNucleusRoot = VeLoad(ContentType.block, "core-nucleus-root");
+        isomorphicCoreShard = VeLoad(ContentType.block, "isomorphic-core-shard");
         powerDrill = VeLoad(ContentType.block, "power-drill");
         beamDrill = VeLoad(ContentType.block, "beam-drill");
         fluidJunction = VeLoad(ContentType.block, "fluid-junction");
@@ -62,8 +64,6 @@ public class VeContent {
         saltElectrolyzer = VeLoad(ContentType.block, "salt-electrolyzer");
         blaster = VeLoad(ContentType.block, "blaster");
         lavaCooler = VeLoad(ContentType.block, "lava-cooler");
-        platformTheta = VeLoad(ContentType.block, "platform-theta");
-        platformLambda = VeLoad(ContentType.block, "platform-lambda");
 
         // Planets
         cyclant = VeLoad(ContentType.planet, "cyclant");
@@ -91,7 +91,8 @@ public class VeContent {
         GenericCrafter saltElectrolyzerPro = (GenericCrafter) AddBlocks.saltElectrolyzerPro;
         saltElectrolyzerPro.requirements = ItemStack.with(Items.metaglass, 40, Items.graphite, 30, catalyzon, 10, chromium, 40);
         saltElectrolyzerPro.consumeItem(salt, 3);
-        saltElectrolyzerPro.outputLiquids = LiquidStack.with(Liquids.water, 0f, chlorine, 9f / 60f, Liquids.hydrogen, 9f/60f);
+        saltElectrolyzerPro.consumeLiquid(Liquids.water, 15f / 60f);
+        saltElectrolyzerPro.outputLiquids = LiquidStack.with(chlorine, 9f / 60f, Liquids.hydrogen, 9f / 60f, Liquids.water, 0f);
         saltElectrolyzerPro.drawer = new DrawMulti(
                 new DrawRegion("-bottom"),
                 new DrawLiquidTile(Liquids.water, 2),
@@ -117,6 +118,7 @@ public class VeContent {
                 }}
         );
         saltElectrolyzerPro.shownPlanets.addAll(cyclant, phoon, maress, thavina);
+        saltElectrolyzerPro.init();
 
         AttributeCrafter sandHoter = (AttributeCrafter) AddBlocks.sandHoter;
         sandHoter.requirements = ItemStack.with(Items.graphite, 100, Items.metaglass, 40, Items.silicon, 40, aluminium, 30);

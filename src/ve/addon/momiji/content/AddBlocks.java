@@ -109,7 +109,6 @@ public class AddBlocks {
 
         cellLaboratoryPro = new OmniCrafter("cell-laboratory-pro") {{
             requirements(Category.crafting, ItemStack.with(Items.metaglass, 80, Items.graphite, 200, Items.silicon, 320));
-            heatRequirement = 0f;
             dumpExtraItem = true;
             consumePower(200f / 60f);
             baseExplosiveness = 1f;
@@ -160,7 +159,7 @@ public class AddBlocks {
                         alpha = 0.6f;
                     }}
             );
-            hideDetails = false;
+            // hideDetails = false;
         }};
 
         saltElectrolyzerPro = new GenericCrafter("salt-electrolyzer-pro") {{
@@ -168,6 +167,7 @@ public class AddBlocks {
             size = 2;
             craftTime = 60f;
             group = BlockGroup.liquids;
+            outputsLiquid = true;
             liquidCapacity = 50f;
             hasItems = true;
             hasLiquids = true;
@@ -178,7 +178,6 @@ public class AddBlocks {
             regionRotated1 = 3;
             liquidOutputDirections = new int[] {0, 1, 3};
             conductivePower = true;
-            consumeLiquid(Liquids.water, 15f / 60f);
             consumePower(30f / 60f);
             ambientSound = Sounds.loopElectricHum;
             ambientSoundVolume = 0.08f;

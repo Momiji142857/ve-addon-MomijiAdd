@@ -58,13 +58,8 @@ public class AddTechTree {
         );
         addAfter(
                 VeContent.coreNucleusRoot,
-                VeContent.platformTheta,
-                node(AddBlocks.platformThetaPro)
-        );
-        addAfter(
-                VeContent.coreNucleusRoot,
-                VeContent.platformLambda,
-                node(AddBlocks.platformLambdaPro)
+                VeContent.isomorphicCoreShard,
+                node(AddBlocks.platformThetaPro, () -> node(AddBlocks.platformLambdaPro))
         );
     }
 

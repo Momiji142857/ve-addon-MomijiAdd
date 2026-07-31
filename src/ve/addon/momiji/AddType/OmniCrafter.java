@@ -69,7 +69,7 @@ public class OmniCrafter extends GenericCrafter {
     // HeatCrafter
 
     /** Base heat requirement for 100% efficiency. */
-    public float heatRequirement = 10f;
+    public float heatRequirement = 0f;
     /** After heat meets this requirement, excess heat will be scaled by this number. */
     public float overheatScale = 1f;
     /** Maximum possible efficiency after overheat. */
