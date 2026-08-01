@@ -61,6 +61,13 @@ public class AddTechTree {
                 VeContent.isomorphicCoreShard,
                 node(AddBlocks.platformThetaPro, () -> node(AddBlocks.platformLambdaPro))
         );
+
+        // maress
+        addAfter(
+                VeContent.coreSingularityRoot,
+                VeContent.ferricRail,
+                node(AddBlocks.batteryItemBridge)
+        );
     }
 
     /**

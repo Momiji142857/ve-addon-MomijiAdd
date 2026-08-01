@@ -17,7 +17,7 @@ import ve.addon.momiji.AddType.OmniCrafter;
 
 public class VeContent {
 
-    public static Item aluminium, quartz, catalyzon, silicide, salt, plantMatter, chromium, nitroalkoss;
+    public static Item aluminium, quartz, catalyzon, silicide, salt, plantMatter, chromium, nitroalkoss, ferrum;
 
     public static Liquid lava, chlorine;
 
@@ -26,11 +26,14 @@ public class VeContent {
     public static Block coreNucleusRoot, isomorphicCoreShard,
             powerDrill, beamDrill,
             railJunction, fluidJunction, railUnloader,
-            cellLaboratory, saltElectrolyzer, blaster, lavaCooler
+            cellLaboratory, saltElectrolyzer, blaster, lavaCooler,
+
+            coreSingularityRoot,
+                    ferricRail
 
             ;
 
-    public static Planet cyclant, phoon, maress, thavina;
+    public static Planet cyclant, phoon, maress, sitrullus, thavina;
 
     public static void load() {
         // Items
@@ -42,6 +45,7 @@ public class VeContent {
         plantMatter = VeLoad(ContentType.item, "plant-matter");
         chromium = VeLoad(ContentType.item, "chromium");
         nitroalkoss = VeLoad(ContentType.item, "nitroalkoss");
+        ferrum = VeLoad(ContentType.item, "ferrum");
 
         // Liquids
         lava = VeLoad(ContentType.liquid, "lava");
@@ -65,10 +69,14 @@ public class VeContent {
         blaster = VeLoad(ContentType.block, "blaster");
         lavaCooler = VeLoad(ContentType.block, "lava-cooler");
 
+        coreSingularityRoot = VeLoad(ContentType.block, "core-singularity-root");
+        ferricRail = VeLoad(ContentType.block, "ferric-rail");
+
         // Planets
         cyclant = VeLoad(ContentType.planet, "cyclant");
         phoon = VeLoad(ContentType.planet, "phoon");
         maress = VeLoad(ContentType.planet, "maress");
+        sitrullus = VeLoad(ContentType.planet, "sitrullus");
         thavina = VeLoad(ContentType.planet, "thavina");
 
 
@@ -93,6 +101,8 @@ public class VeContent {
         saltElectrolyzerPro.consumeItem(salt, 3);
         saltElectrolyzerPro.consumeLiquid(Liquids.water, 15f / 60f);
         saltElectrolyzerPro.outputLiquids = LiquidStack.with(chlorine, 9f / 60f, Liquids.hydrogen, 9f / 60f, Liquids.water, 0f);
+        saltElectrolyzerPro.regionRotated1 = 3;
+        saltElectrolyzerPro.liquidOutputDirections = new int[] {1, 3, 0};
         saltElectrolyzerPro.drawer = new DrawMulti(
                 new DrawRegion("-bottom"),
                 new DrawLiquidTile(Liquids.water, 2),
@@ -133,6 +143,9 @@ public class VeContent {
         platformLambdaPro.requirements = ItemStack.with(Items.lead, 200, Items.graphite, 50, Items.silicon, 200, aluminium, 200, silicide, 25);
         platformLambdaPro.unitType = lambdaTether;
         platformLambdaPro.shownPlanets.addAll(cyclant, phoon, maress, thavina);
+
+        AddBlocks.batteryItemBridge.requirements = ItemStack.with(Items.lead, 10, Items.silicon, 2, quartz, 2, ferrum, 10);
+        AddBlocks.batteryItemBridge.shownPlanets.addAll(maress, sitrullus, thavina);
     }
 
     public static <T extends MappableContent> T VeLoad(ContentType type, String name) {

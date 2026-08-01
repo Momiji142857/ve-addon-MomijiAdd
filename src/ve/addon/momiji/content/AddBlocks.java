@@ -16,6 +16,7 @@ import mindustry.world.blocks.storage.Unloader;
 import mindustry.world.blocks.units.UnitCargoLoader;
 import mindustry.world.draw.*;
 import mindustry.world.meta.BlockGroup;
+import ve.addon.momiji.AddType.BatchDumpBridge;
 import ve.addon.momiji.AddType.ItemLiquidJunction;
 import ve.addon.momiji.AddType.LinkedDrill;
 import ve.addon.momiji.AddType.OmniCrafter;
@@ -24,13 +25,19 @@ import static mindustry.type.ItemStack.with;
 
 public class AddBlocks {
 
-    public static Block itemLiquidJunction,
+    public static Block
+            itemLiquidJunction,
             powerDrillPro, beamDrillPro,
             railLiquidJunction, isomorphicUnloader,
             cellLaboratoryPro, saltElectrolyzerPro, sandHoter,
-            platformThetaPro, platformLambdaPro;
+            platformThetaPro, platformLambdaPro,
+
+            batteryItemBridge
+
+            ;
 
     public static void load() {
+        // s
         itemLiquidJunction = new ItemLiquidJunction("item-liquid-junction") {{
             requirements(Category.distribution, ItemStack.with(Items.copper, 3, Items.metaglass, 8, Items.graphite, 4));
             speed = 26f;
@@ -39,11 +46,14 @@ public class AddBlocks {
             researchCostMultiplier = 0.2f;
         }};
 
+
+        // c
         powerDrillPro = new LinkedDrill("power-drill-pro") {{
             requirements(Category.production, ItemStack.with(Items.metaglass, 2, Items.graphite, 20, Items.silicon, 3));
             dumpTime = 1;
             size = 2;
             tier = 3;
+            hasItems = true;
             hasPower = true;
             conductivePower = true;
             rotateSpeed = 5f;
@@ -90,6 +100,7 @@ public class AddBlocks {
             researchCostMultiplier = 0.02f;
         }};
 
+
         railLiquidJunction = new ItemLiquidJunction("rail-liquid-junction") {{
             requirements(Category.distribution, ItemStack.with(Items.graphite, 4));
             speed = 10f;
@@ -106,6 +117,7 @@ public class AddBlocks {
             group = BlockGroup.transportation;
             researchCostMultiplier = 0.02f;
         }};
+
 
         cellLaboratoryPro = new OmniCrafter("cell-laboratory-pro") {{
             requirements(Category.crafting, ItemStack.with(Items.metaglass, 80, Items.graphite, 200, Items.silicon, 320));
@@ -159,6 +171,7 @@ public class AddBlocks {
                         alpha = 0.6f;
                     }}
             );
+            outputItems = ItemStack.with();
             // hideDetails = false;
         }};
 
@@ -175,8 +188,6 @@ public class AddBlocks {
             itemCapacity = 30;
             invertFlip = true;
             rotate = true;
-            regionRotated1 = 3;
-            liquidOutputDirections = new int[] {0, 1, 3};
             conductivePower = true;
             consumePower(30f / 60f);
             ambientSound = Sounds.loopElectricHum;
@@ -190,13 +201,14 @@ public class AddBlocks {
             size = 2;
             consumePower(42f / 60f);
             consumeItems(ItemStack.with(Items.sand, 3, Items.blastCompound, 1));
+            outputLiquids = LiquidStack.with(Liquids.water, 8f / 60f);
+            outputsLiquid = true;
             craftTime = 60f / 2f;
             hasLiquids = true;
             hasItems = true;
             hasPower = true;
             liquidCapacity = 80f;
             itemCapacity = 60;
-            outputsLiquid = true;
             ambientSound = Sounds.loopSmelter;
             ambientSoundVolume = 0.08f;
             drawer = new DrawMulti(
@@ -213,6 +225,7 @@ public class AddBlocks {
             maxBoost = 3f;
             minEfficiency = -1f;
         }};
+
 
         platformThetaPro = new UnitCargoLoader("platform-theta-pro") {{
             requirements(Category.units, ItemStack.with(Items.lead, 160, Items.silicon, 100));
@@ -249,6 +262,30 @@ public class AddBlocks {
             underBullets = true;
             shownPlanets.addAll(VeContent.cyclant, VeContent.phoon, VeContent.maress, VeContent.thavina);
             researchCostMultiplier = 0.02f;
+        }};
+
+
+        // m
+        batteryItemBridge = new BatchDumpBridge("battery-item-bridge") {{
+            requirements(Category.distribution, ItemStack.with(Items.lead, 10, Items.silicon, 2));
+            range = 6;
+            transportTime = 1f;
+            fadeIn = false;
+            itemCapacity = 30;
+            moveArrows = true;
+            pulse = true;
+            arrowSpacing = 4f;
+            buildCostMultiplier = 3f;
+            bridgeWidth = 8f;
+            arrowPeriod = 1f;
+            arrowTimeScl = 2f;
+            researchCostMultiplier = 0.1f;
+            hasPower = true;
+            squareSprite = false;
+            consumePowerBuffered(200f);
+            canOverdrive = true;
+            conductivePower = true;
+            outputsPower = true;
         }};
     }
 }
