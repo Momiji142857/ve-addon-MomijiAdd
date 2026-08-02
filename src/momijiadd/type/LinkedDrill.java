@@ -1,4 +1,4 @@
-package ve.addon.momiji.AddType;
+package momijiadd.type;
 
 import arc.Core;
 import arc.graphics.Blending;

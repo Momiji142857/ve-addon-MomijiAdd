@@ -12,7 +12,7 @@ This mod adds some extra content on top of the Vanilla Expansion mod, based on p
 - [Momiji142857](https://github.com/Momiji142857) — Author of this add‑on
 
 ## Version
-- Add‑on version: v0.5
+- Add‑on version: v1.0
 - Last updated: 2026-08-02
 
 ## Compatibility
@@ -32,7 +32,7 @@ Suggestions and improvements are welcome. If you would like to contribute conten
 
 Contact / submission options:
 - GitHub: [Momiji142857](https://github.com/Momiji142857)
-- VE mod QQ group: 974330782
+- VE mod QQ group: 1090802935
 - Author QQ: 1945542457
 
 ## License

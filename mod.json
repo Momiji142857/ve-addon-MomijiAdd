@@ -2,7 +2,7 @@
   "name": "ve-addon-momiji",
   "displayName": "VE Addon: MomijiAdd",
   "author": "[sky[]]Momiji142857[white[]]",
-  "version": "0.5",
+  "version": "1.0",
   "minGameVersion": "159",
 
   "subtitle": "Vanilla Expansion 模组的个人向内容扩展附属\n[sky[]]磨米机扩展[white[]]",
@@ -10,7 +10,7 @@
 
   "hidden": false,
   "java": true,
-  "main": "ve.addon.momiji.ModLoad",
+  "main": "momijiadd.ModLoad",
   "dependencies": [
     "ve"
   ],

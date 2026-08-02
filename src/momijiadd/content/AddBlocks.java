@@ -1,4 +1,4 @@
-package ve.addon.momiji.content;
+package momijiadd.content;
 
 import arc.graphics.Color;
 import mindustry.content.Fx;
@@ -12,20 +12,23 @@ import mindustry.world.Block;
 import mindustry.world.blocks.production.AttributeCrafter;
 import mindustry.world.blocks.production.Drill;
 import mindustry.world.blocks.production.GenericCrafter;
+import mindustry.world.blocks.storage.CoreBlock;
 import mindustry.world.blocks.storage.Unloader;
 import mindustry.world.blocks.units.UnitCargoLoader;
 import mindustry.world.draw.*;
 import mindustry.world.meta.BlockGroup;
-import ve.addon.momiji.AddType.BatchDumpBridge;
-import ve.addon.momiji.AddType.ItemLiquidJunction;
-import ve.addon.momiji.AddType.LinkedDrill;
-import ve.addon.momiji.AddType.OmniCrafter;
+import mindustry.world.meta.BuildVisibility;
+import momijiadd.type.BatchDumpBridge;
+import momijiadd.type.ItemLiquidJunction;
+import momijiadd.type.LinkedDrill;
+import momijiadd.type.OmniCrafter;
 
 import static mindustry.type.ItemStack.with;
 
 public class AddBlocks {
 
     public static Block
+            pogCore,
             itemLiquidJunction,
             powerDrillPro, beamDrillPro,
             railLiquidJunction, isomorphicUnloader,
@@ -37,7 +40,19 @@ public class AddBlocks {
             ;
 
     public static void load() {
-        // s
+        // Test
+        pogCore = new CoreBlock("pog-core") {{
+            requirements(Category.effect, BuildVisibility.sandboxOnly, with());
+            health = 2147467;
+            armor = 2147467;
+            size = 3;
+            itemCapacity = 4000;
+            unitCapModifier = 8;
+            unitType = UnitTypes.emanate;
+            alwaysUnlocked = true;
+        }};
+
+        // Serpulo
         itemLiquidJunction = new ItemLiquidJunction("item-liquid-junction") {{
             requirements(Category.distribution, ItemStack.with(Items.copper, 3, Items.metaglass, 8, Items.graphite, 4));
             speed = 26f;
@@ -47,7 +62,7 @@ public class AddBlocks {
         }};
 
 
-        // c
+        // Cyclant
         powerDrillPro = new LinkedDrill("power-drill-pro") {{
             requirements(Category.production, ItemStack.with(Items.metaglass, 2, Items.graphite, 20, Items.silicon, 3));
             dumpTime = 1;
@@ -265,7 +280,7 @@ public class AddBlocks {
         }};
 
 
-        // m
+        // Maress
         batteryItemBridge = new BatchDumpBridge("battery-item-bridge") {{
             requirements(Category.distribution, ItemStack.with(Items.lead, 10, Items.silicon, 2));
             range = 6;

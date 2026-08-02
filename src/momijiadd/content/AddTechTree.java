@@ -1,4 +1,4 @@
-package ve.addon.momiji.content;
+package momijiadd.content;
 
 import arc.struct.Seq;
 import arc.util.Log;
@@ -14,60 +14,38 @@ public class AddTechTree {
 
     public static void load() {
         // Serpulo
-        addAfter(
-                Blocks.coreShard,
-                Blocks.liquidJunction,
-                node(AddBlocks.itemLiquidJunction, Seq.with(new Objectives.Research(Blocks.junction)), () -> {})
-        );
+        addAfter(Blocks.coreShard, Blocks.liquidJunction,
+                node(AddBlocks.itemLiquidJunction, Seq.with(new Objectives.Research(Blocks.junction)), () -> {}));
 
-        // cyclant
-        addAfter(
-                VeContent.coreNucleusRoot,
-                VeContent.powerDrill,
-                node(AddBlocks.powerDrillPro)
-        );
-        addAfter(
-                VeContent.coreNucleusRoot,
-                VeContent.beamDrill,
-                node(AddBlocks.beamDrillPro)
-        );
-        addAfter(
-                VeContent.coreNucleusRoot,
-                VeContent.fluidJunction,
-                node(AddBlocks.railLiquidJunction, Seq.with(new Objectives.Research(VeContent.railJunction)), () -> {})
-        );
-        addAfter(
-                VeContent.coreNucleusRoot,
-                VeContent.railUnloader,
-                node(AddBlocks.isomorphicUnloader)
-        );
-        addAfter(
-                VeContent.coreNucleusRoot,
-                VeContent.cellLaboratory,
-                node(AddBlocks.cellLaboratoryPro)
-        );
-        addAfter(
-                VeContent.coreNucleusRoot,
-                VeContent.saltElectrolyzer,
-                node(AddBlocks.saltElectrolyzerPro)
-        );
-        addAfter(
-                VeContent.coreNucleusRoot,
-                VeContent.blaster,
-                node(AddBlocks.sandHoter, Seq.with(new Objectives.Research(VeContent.lavaCooler)), () -> {})
-        );
-        addAfter(
-                VeContent.coreNucleusRoot,
-                VeContent.isomorphicCoreShard,
-                node(AddBlocks.platformThetaPro, () -> node(AddBlocks.platformLambdaPro))
-        );
+        // Cyclant
+        cyclantAddAfter(VeContent.powerDrill,
+                node(AddBlocks.powerDrillPro));
 
-        // maress
-        addAfter(
-                VeContent.coreSingularityRoot,
-                VeContent.ferricRail,
-                node(AddBlocks.batteryItemBridge)
-        );
+        cyclantAddAfter(VeContent.beamDrill,
+                node(AddBlocks.beamDrillPro));
+
+        cyclantAddAfter(VeContent.fluidJunction,
+                node(AddBlocks.railLiquidJunction, Seq.with(new Objectives.Research(VeContent.railJunction)), () -> {}));
+
+        cyclantAddAfter(VeContent.railUnloader,
+                node(AddBlocks.isomorphicUnloader));
+
+        cyclantAddAfter(VeContent.cellLaboratory,
+                node(AddBlocks.cellLaboratoryPro));
+
+        cyclantAddAfter(VeContent.saltElectrolyzer,
+                node(AddBlocks.saltElectrolyzerPro));
+
+        cyclantAddAfter(VeContent.blaster,
+                node(AddBlocks.sandHoter, Seq.with(new Objectives.Research(VeContent.lavaCooler)), () -> {}));
+
+        cyclantAddAfter(VeContent.isomorphicCoreShard,
+                node(AddBlocks.platformThetaPro, () ->
+                        node(AddBlocks.platformLambdaPro)));
+
+        // Maress
+        maressAddAfter(VeContent.ferricRail,
+                node(AddBlocks.batteryItemBridge));
     }
 
     /**
@@ -148,6 +126,16 @@ public class AddTechTree {
             if (found != null) return found;
         }
         return null;
+    }
+
+    /** 在赛克兰特科技树中添加节点 */
+    private static void cyclantAddAfter(UnlockableContent c, TechTree.TechNode newNode) {
+        addAfter(VeContent.coreNucleusRoot, c, newNode);
+    }
+
+    /** 在玛瑞斯科技树中添加节点 */
+    private static void maressAddAfter(UnlockableContent c, TechTree.TechNode newNode) {
+        addAfter(VeContent.coreSingularityRoot, c, newNode);
     }
 
 }
