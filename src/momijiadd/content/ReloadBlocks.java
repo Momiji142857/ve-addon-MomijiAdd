@@ -67,10 +67,11 @@ public class ReloadBlocks {
         saltElectrolyzerPro.shownPlanets.addAll(VeContent.cyclant, VeContent.phoon, VeContent.maress, VeContent.thavina);
         saltElectrolyzerPro.init();
 
-        AttributeCrafter sandHoter = (AttributeCrafter) AddBlocks.sandHoter;
+        OmniCrafter sandHoter = (OmniCrafter) AddBlocks.sandHoter;
         sandHoter.requirements = ItemStack.with(Items.graphite, 100, Items.metaglass, 40, Items.silicon, 40, VeContent.aluminium, 30);
         sandHoter.outputLiquids = LiquidStack.with(VeContent.lava, 8f / 60f);
         sandHoter.shownPlanets.addAll(VeContent.cyclant, VeContent.phoon, VeContent.maress, VeContent.thavina);
+        sandHoter.init();
 
         UnitCargoLoader platformThetaPro = (UnitCargoLoader) AddBlocks.platformThetaPro;
         platformThetaPro.requirements = ItemStack.with(Items.lead, 160, Items.silicon, 100, VeContent.aluminium, 200);

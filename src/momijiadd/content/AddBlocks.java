@@ -16,6 +16,7 @@ import mindustry.world.blocks.storage.CoreBlock;
 import mindustry.world.blocks.storage.Unloader;
 import mindustry.world.blocks.units.UnitCargoLoader;
 import mindustry.world.draw.*;
+import mindustry.world.meta.Attribute;
 import mindustry.world.meta.BlockGroup;
 import mindustry.world.meta.BuildVisibility;
 import momijiadd.type.BatchDumpBridge;
@@ -211,12 +212,11 @@ public class AddBlocks {
             researchCostMultiplier = 0.02f;
         }};
 
-        sandHoter = new AttributeCrafter("sand-hoter") {{
+        sandHoter = new OmniCrafter("sand-hoter") {{
             requirements(Category.crafting, ItemStack.with(Items.graphite, 100, Items.metaglass, 40, Items.silicon, 40));
             size = 2;
             consumePower(42f / 60f);
             consumeItems(ItemStack.with(Items.sand, 3, Items.blastCompound, 1));
-            outputLiquids = LiquidStack.with(Liquids.water, 8f / 60f);
             outputsLiquid = true;
             craftTime = 60f / 2f;
             hasLiquids = true;
@@ -235,7 +235,7 @@ public class AddBlocks {
                     }},
                     new DrawFlame(Color.valueOf("ffb6a5"))
             );
-
+            attribute = Attribute.heat;
             boostScale = 0.5f;
             maxBoost = 3f;
             minEfficiency = -1f;
