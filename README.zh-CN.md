@@ -8,12 +8,12 @@
 **请在使用前先启用 Vanilla Expansion 模组.**
 
 ## 作者
-- [火星人076](https://github.com/Martian238) — Vanilla Expansion 模组作者
+- [火星人076](https://github.com/Martian238) & [128_OTEML](https://github.com/128OTEML) — Vanilla Expansion 模组作者
 - [Momiji142857](https://github.com/Momiji142857) — 本附属作者
 
 ## 版本
-- 附属版本: v1.0
-- 最后更新: 2026-08-03
+- 附属版本: v1.1
+- 最后更新: 2026-08-08
 
 ## 兼容性
 - Mindustry 游戏版本 >= v159
@@ -33,6 +33,7 @@
 联系 / 提交方式:
 - GitHub: [Momiji142857](https://github.com/Momiji142857)
 - VE 模组 QQ 群: 1090802935 (6群)
+- VE Discord: 
 - 作者 QQ: 1945542457
 
 ## 许可

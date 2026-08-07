@@ -8,12 +8,12 @@ This mod adds some extra content on top of the Vanilla Expansion mod, based on p
 **Enable the Vanilla Expansion mod before using this addon.**
 
 ## Authors
-- [火星人076](https://github.com/Martian238) — Creator of Vanilla Expansion
+- [火星人076](https://github.com/Martian238) & [128_OTEML](https://github.com/128OTEML) — Creator of Vanilla Expansion
 - [Momiji142857](https://github.com/Momiji142857) — Author of this add‑on
 
 ## Version
-- Add‑on version: v1.0
-- Last updated: 2026-08-03
+- Add‑on version: v1.1
+- Last updated: 2026-08-08
 
 ## Compatibility
 - Mindustry >= v159
@@ -33,6 +33,7 @@ Suggestions and improvements are welcome. If you would like to contribute conten
 Contact / submission options:
 - GitHub: [Momiji142857](https://github.com/Momiji142857)
 - VE mod QQ group: 1090802935
+- VE Discord:
 - Author QQ: 1945542457
 
 ## License
