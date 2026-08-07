@@ -20,6 +20,7 @@ import mindustry.content.Fx;
 import mindustry.entities.Effect;
 import mindustry.entities.units.BuildPlan;
 import mindustry.game.Team;
+import mindustry.gen.Building;
 import mindustry.gen.Sounds;
 import mindustry.graphics.Drawf;
 import mindustry.graphics.Layer;
@@ -39,9 +40,9 @@ import static mindustry.Vars.*;
  * 继承 {@link LinkedBlock} 实现组共享物品, 挖掘逻辑与原版 {@link Drill} 一致.
  *
  * @author Momiji142857
- * @since 2026-07-14
  * @see LinkedBlock
  * @see Drill
+ * @since 2026-07-14
  */
 public class LinkedDrill extends LinkedBlock{
     public float hardnessDrillMultiplier = 50f;
@@ -130,8 +131,7 @@ public class LinkedDrill extends LinkedBlock{
     public void setBars(){
         super.setBars();
 
-        addBar("drillSpeed", (LinkedDrillBuild e) ->
-                new Bar(() -> Core.bundle.format("bar.drillspeed", Strings.fixed(e.lastDrillSpeed * 60 * e.timeScale(), 2)), () -> Pal.ammo, () -> e.warmup));
+        addBar("drillSpeed", (LinkedDrillBuild e) -> new Bar(() -> Core.bundle.format("bar.drillspeed", Strings.fixed(e.lastDrillSpeed * 60 * e.timeScale(), 2)), () -> Pal.ammo, () -> e.warmup));
     }
 
     public Item getDrop(Tile tile){
@@ -163,7 +163,7 @@ public class LinkedDrill extends LinkedBlock{
 
         if(returnItem != null){
             float width = drawPlaceText(Core.bundle.formatFloat("bar.drillspeed", 60f / getDrillTime(returnItem) * returnCount, 2), x, y, valid);
-            float dx = x * tilesize + offset - width/2f - 4f, dy = y * tilesize + offset + size * tilesize / 2f + 5, s = iconSmall / 4f;
+            float dx = x * tilesize + offset - width / 2f - 4f, dy = y * tilesize + offset + size * tilesize / 2f + 5, s = iconSmall / 4f;
             Draw.mixcol(Color.darkGray, 1f);
             Draw.rect(returnItem.fullIcon, dx, dy - 1, s, s);
             Draw.reset();
@@ -191,24 +191,19 @@ public class LinkedDrill extends LinkedBlock{
     public void setStats(){
         super.setStats();
 
-        stats.add(Stat.drillTier, StatValues.drillables(drillTime, hardnessDrillMultiplier, size * size, drillMultipliers, b -> b instanceof Floor f && !f.wallOre && f.itemDrop != null &&
-                f.itemDrop.hardness <= tier && (blockedItems == null || !blockedItems.contains(f.itemDrop)) && (indexer.isBlockPresent(f) || state.isMenu())));
+        stats.add(Stat.drillTier, StatValues.drillables(drillTime, hardnessDrillMultiplier, size * size, drillMultipliers, b -> b instanceof Floor f && !f.wallOre && f.itemDrop != null && f.itemDrop.hardness <= tier && (blockedItems == null || !blockedItems.contains(f.itemDrop)) && (indexer.isBlockPresent(f) || state.isMenu())));
 
         stats.add(Stat.drillSpeed, 60f / drillTime * size * size, StatUnit.itemsSecond);
 
         if(liquidBoostIntensity != 1 && findConsumer(f -> f instanceof mindustry.world.consumers.ConsumeLiquidBase && f.booster) instanceof mindustry.world.consumers.ConsumeLiquidBase consBase){
             stats.remove(Stat.booster);
-            stats.add(Stat.booster,
-                    StatValues.speedBoosters("{0}" + StatUnit.timesSpeed.localized(),
-                            consBase.amount,
-                            liquidBoostIntensity * liquidBoostIntensity, false, consBase::consumes)
-            );
+            stats.add(Stat.booster, StatValues.speedBoosters("{0}" + StatUnit.timesSpeed.localized(), consBase.amount, liquidBoostIntensity * liquidBoostIntensity, false, consBase::consumes));
         }
     }
 
     @Override
     public TextureRegion[] icons(){
-        return new TextureRegion[]{region, rotatorRegion, topRegion};
+        return new TextureRegion[] {region, rotatorRegion, topRegion};
     }
 
     protected void countOre(Tile tile){
@@ -340,14 +335,15 @@ public class LinkedDrill extends LinkedBlock{
             }
 
             if(dominantItems > 0 && progress >= delay && items.total() < cap){
-                int amount = (int)(progress / delay);
+                int amount = (int) (progress / delay);
                 for(int i = 0; i < amount; i++){
                     offload(dominantItem);
                 }
 
                 progress %= delay;
 
-                if(wasVisible && Mathf.chanceDelta(drillEffectChance * warmup)) drillEffect.at(x + Mathf.range(drillEffectRnd), y + Mathf.range(drillEffectRnd), dominantItem.color);
+                if(wasVisible && Mathf.chanceDelta(drillEffectChance * warmup))
+                    drillEffect.at(x + Mathf.range(drillEffectRnd), y + Mathf.range(drillEffectRnd), dominantItem.color);
             }
         }
 
@@ -406,6 +402,11 @@ public class LinkedDrill extends LinkedBlock{
         @Override
         public byte version(){
             return 1;
+        }
+
+        @Override
+        public boolean acceptItem(Building source, Item item){
+            return false;
         }
 
         @Override

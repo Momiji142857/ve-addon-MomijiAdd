@@ -5,7 +5,6 @@ import mindustry.content.Items;
 import mindustry.content.Liquids;
 import mindustry.type.ItemStack;
 import mindustry.type.LiquidStack;
-import mindustry.world.blocks.production.AttributeCrafter;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.blocks.units.UnitCargoLoader;
 import mindustry.world.draw.*;
@@ -14,11 +13,12 @@ import momijiadd.type.OmniCrafter;
 
 public class ReloadBlocks {
     public static void load() {
-        // Serpulo
-        AddBlocks.railLiquidJunction.requirements = ItemStack.with(Items.graphite, 4, VeContent.aluminium, 14);
-
         // Cyclant
+        AddBlocks.railLiquidJunction.requirements = ItemStack.with(Items.graphite, 4, VeContent.aluminium, 14);
+        AddBlocks.railLiquidJunction.shownPlanets.addAll(VeContent.cyclant, VeContent.phoon, VeContent.thavina);
+
         AddBlocks.isomorphicUnloader.requirements = ItemStack.with(Items.silicon, 30, VeContent.aluminium, 40);
+        AddBlocks.isomorphicUnloader.shownPlanets.addAll(VeContent.cyclant, VeContent.phoon, VeContent.thavina);
 
         AddBlocks.powerDrillPro.requirements = ItemStack.with(Items.metaglass, 2, Items.graphite, 20, Items.silicon, 3, VeContent.aluminium, 24);
 
