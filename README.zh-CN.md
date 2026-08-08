@@ -33,7 +33,7 @@
 联系 / 提交方式:
 - GitHub: [Momiji142857](https://github.com/Momiji142857)
 - VE 模组 QQ 群: 1090802935 (6群)
-- VE Discord: 
+- VE Discord: [here](https://discord.gg/4KgzzunQ9q)
 - 作者 QQ: 1945542457
 
 ## 许可

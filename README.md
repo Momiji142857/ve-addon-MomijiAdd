@@ -33,7 +33,7 @@ Suggestions and improvements are welcome. If you would like to contribute conten
 Contact / submission options:
 - GitHub: [Momiji142857](https://github.com/Momiji142857)
 - VE mod QQ group: 1090802935
-- VE Discord:
+- VE Discord: [here](https://discord.gg/4KgzzunQ9q)
 - Author QQ: 1945542457
 
 ## License
