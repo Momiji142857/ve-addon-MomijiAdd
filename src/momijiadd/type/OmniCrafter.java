@@ -28,9 +28,9 @@ import mindustry.world.Tile;
 import mindustry.world.blocks.heat.HeatBlock;
 import mindustry.world.blocks.heat.HeatConsumer;
 import mindustry.world.blocks.heat.HeatProducer;
+import mindustry.world.blocks.production.AttributeCrafter;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.blocks.production.HeatCrafter;
-import mindustry.world.blocks.production.AttributeCrafter;
 import mindustry.world.blocks.production.Separator;
 import mindustry.world.consumers.ConsumeItems;
 import mindustry.world.consumers.ConsumeLiquid;
@@ -38,7 +38,10 @@ import mindustry.world.consumers.ConsumeLiquids;
 import mindustry.world.draw.DrawDefault;
 import mindustry.world.draw.DrawHeatOutput;
 import mindustry.world.draw.DrawMulti;
-import mindustry.world.meta.*;
+import mindustry.world.meta.Attribute;
+import mindustry.world.meta.Stat;
+import mindustry.world.meta.StatUnit;
+import mindustry.world.meta.StatValues;
 
 import static mindustry.world.meta.StatValues.stack;
 
@@ -65,6 +68,8 @@ public class OmniCrafter extends GenericCrafter{
 
     /** 多余产物是否销毁. */
     public boolean dumpExtraItem = false;
+    /** 多余随机产物是否销毁. */
+    public boolean dumpRandomItem = false;
     /** 产物是否堵塞生产. */
     public boolean ignoreItemFullness = false;
 
@@ -117,6 +122,7 @@ public class OmniCrafter extends GenericCrafter{
         super(name);
     }
 
+    @Override
     public void init(){
         super.init();
 
@@ -241,7 +247,7 @@ public class OmniCrafter extends GenericCrafter{
                     return Core.bundle.format("bar.poweramount", Float.isNaN(amount) ? "<ERROR>" : longFmtNum(amount) + ((fill > 0.99f) ? "" : "/" + longFmtNum(capacity) + " [lightgray]| " + Strings.fixedBuilder(fill * 100, 0) + "%[]"));
                 }else{
                     float usage = consPower.usage * 60 * entity.timeScale();
-                    return Iconc.power + "- " + longFmtNum(fill * usage) + ((fill > 0.99f) ? "" : "/" + Strings.autoFixed(usage, 2)) + ((entity.efficiency <= 0) ? " [lightgray]| 0%[]" : (fill > 0.99f) ? "" : " [lightgray]| " + Strings.fixedBuilder(fill * 100, 0) + "%[]");
+                    return Iconc.power + " " + longFmtNum(fill * usage) + ((fill > 0.99f) ? "" : "/" + Strings.autoFixed(usage, 2)) + ((entity.efficiency <= 0) ? " [lightgray]| 0%[]" : (fill > 0.99f) ? "" : " [lightgray]| " + Strings.fixedBuilder(fill * 100, 0) + "%[]");
                 }
             }, () -> Pal.powerBar, () -> Mathf.zero(consPower.requestedPower(entity)) && entity.power.graph.getPowerProduced() + entity.power.graph.getBatteryStored() > 0f ? 1f : entity.power.status));
         }
@@ -261,7 +267,7 @@ public class OmniCrafter extends GenericCrafter{
                  * 如果 consumers 中存在含有相同的液体的 ConsumeLiquid, 且该种液体的第一个和最后一个之间含有其他液体
                  * 液体条的顺序会与原版逻辑下的顺序不同
                  * 原版会出现在第一次的位置, 这里的会出现在最后一次的位置
-                 *  */
+                 * */
                 if(consl instanceof ConsumeLiquid liq){
                     added = true;
                     removeBar("liquid-" + liq.liquid.name);
@@ -439,9 +445,13 @@ public class OmniCrafter extends GenericCrafter{
             // Heat
             if(heatRequirement > 0f && inputHeat <= 0) return false;
 
+            boolean anyOutput = false;
+            boolean allFull  = true;
+
             if(!ignoreItemFullness){
-                boolean allFull = true;
+
                 if(fixedOutputItems != null){
+                    anyOutput = true;
                     for(var output : fixedOutputItems){
                         if(items.get(output.item) + output.amount > itemCapacity){
                             if(!dumpExtraItem) return false;
@@ -451,32 +461,31 @@ public class OmniCrafter extends GenericCrafter{
                 }
 
                 if(randomResults != null){
+                    anyOutput = true;
                     int total = 0;
                     if(randomOutputItems != null){
                         for(Item output : randomOutputItems){
                             total += items.get(output);
                             if(total >= randomItemCapacity){
-                                if(!dumpExtraItem) return false;
+                                if(!dumpRandomItem) return false;
 
                             }else allFull = false;
                         }
                     }
                 }
-
-                if(allFull) return false;
             }
 
-            if(outputLiquids != null && !ignoreLiquidFullness){
-                boolean allFull = true;
+            if(!ignoreLiquidFullness && outputLiquids != null){
+                anyOutput = true;
                 for(var output : outputLiquids){
                     if(liquids.get(output.liquid) >= liquidCapacity - 0.001f){
                         if(!dumpExtraLiquid) return false;
 
                     }else allFull = false;
                 }
-
-                if(allFull) return false;
             }
+
+            if(anyOutput && allFull) return false;
 
             return enabled;
         }

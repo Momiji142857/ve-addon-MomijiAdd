@@ -136,7 +136,7 @@ public class VeAddBlocks{
 
         cellLaboratoryPro = new OmniCrafter("cell-laboratory-pro"){{
             requirements(Category.crafting, ItemStack.with(Items.metaglass, 80, Items.graphite, 200, Items.silicon, 320, VeContent.catalyzon, 50, VeContent.chromium, 400));
-            dumpExtraItem = true;
+            dumpRandomItem = true;
             randomResults = ItemStack.with(VeContent.nitroalkoss, 1, Items.sporePod, 5, VeContent.plantMatter, 5);
             emptyWeight = 49;
             consumeItems(ItemStack.with(Items.sporePod, 1, VeContent.plantMatter, 1));
