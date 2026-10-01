@@ -18,7 +18,7 @@ import static mindustry.content.TechTree.node;
  */
 public class AddTechTree{
     public static void load(){
-        //region Cyclant
+        //region Serpulo
 
         serpuloAddAfter(Blocks.junction,
                         node(AddBlocks.itemLiquidJunction, Seq.with(new Objectives.Research(Blocks.liquidJunction)), () -> {}));

@@ -560,7 +560,7 @@ public class OmniCrafter extends GenericCrafter{
             progress %= 1f;
         }
 
-        // 下面这个可以让热量自循环, 但是可能造成死循环.
+        //下面这个可以让热量自循环, 但是可能造成死循环.
         /*
         @Override
         public float calculateHeat(float[] sideHeat, IntSet cameFrom) {

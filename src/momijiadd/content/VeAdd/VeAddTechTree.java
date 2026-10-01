@@ -1,4 +1,4 @@
-package momijiadd.content.LoadingVe;
+package momijiadd.content.VeAdd;
 
 import arc.struct.Seq;
 import mindustry.content.TechTree;

@@ -1,4 +1,4 @@
-package momijiadd.content.LoadingVe;
+package momijiadd.content.VeAdd;
 
 import arc.util.Log;
 import mindustry.Vars;
@@ -16,7 +16,7 @@ public class VeContent{
 
     public static Item
             //Cyclant
-            aluminium, quartz, catalyzon, silicide, salt, plantMatter, chromium, nitroalkoss,
+            aluminium, quartz, catalyzon, silicide, salt, plantMatter, chromium, nitroalkoss, cobalt, fibralt, fusionFuel, warpNucleus,
 
     //Maress
     ferrum;
@@ -67,7 +67,11 @@ public class VeContent{
         plantMatter = VeLoadItems("plant-matter");
         chromium = VeLoadItems("chromium");
         nitroalkoss = VeLoadItems("nitroalkoss");
+        cobalt = VeLoadItems("cobalt");
+        fibralt = VeLoadItems("fibralt");
         ferrum = VeLoadItems("ferrum");
+        fusionFuel = VeLoadItems("fusion-fuel");
+        warpNucleus = VeLoadItems("warp-nucleus");
 
         //endregion
         //region Liquids

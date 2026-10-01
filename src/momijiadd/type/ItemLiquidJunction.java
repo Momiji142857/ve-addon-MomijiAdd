@@ -26,7 +26,7 @@ import static mindustry.Vars.content;
  * @see Junction
  * @see LiquidJunction
  */
-public class ItemLiquidJunction extends LiquidJunction {
+public class ItemLiquidJunction extends LiquidJunction{
     public float speed = 26;
     public int capacity = 6;
     public float displayedSpeed = 13f;

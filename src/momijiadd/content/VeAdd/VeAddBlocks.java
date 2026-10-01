@@ -1,4 +1,4 @@
-package momijiadd.content.LoadingVe;
+package momijiadd.content.VeAdd;
 
 import arc.graphics.Color;
 import mindustry.content.*;
@@ -7,6 +7,7 @@ import mindustry.entities.effect.ParticleEffect;
 import mindustry.gen.Sounds;
 import mindustry.type.*;
 import mindustry.world.Block;
+import mindustry.world.blocks.heat.HeatProducer;
 import mindustry.world.blocks.production.Drill;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.blocks.storage.Unloader;
@@ -18,6 +19,8 @@ import momijiadd.type.BatchDumpBridge;
 import momijiadd.type.ItemLiquidJunction;
 import momijiadd.type.LinkedDrill;
 import momijiadd.type.OmniCrafter;
+
+import static mindustry.type.ItemStack.with;
 
 /**
  * 掌管与 Vanilla Expansion 模组联动的方块.
@@ -36,7 +39,7 @@ public class VeAddBlocks{
     railLiquidJunction, isomorphicUnloader,
 
     //crafting
-    cellLaboratoryPro, saltElectrolyzerPro, sandHoter,
+    cellLaboratoryPro, saltElectrolyzerPro, sandHoter, fusionHeater,
 
     //units
     platformThetaPro, platformLambdaPro,
@@ -51,6 +54,8 @@ public class VeAddBlocks{
 
 
     public static void load(){
+        //适应性修改
+
         //Cyclant
         //region production
 
@@ -117,7 +122,6 @@ public class VeAddBlocks{
             buildCostMultiplier = 6f;
             squareSprite = false;
             researchCostMultiplier = 0.2f;
-            shownPlanets.addAll(VeContent.cyclant, VeContent.phoon, VeContent.thavina);
         }};
 
         isomorphicUnloader = new Unloader("isomorphic-unloader"){{
@@ -125,7 +129,6 @@ public class VeAddBlocks{
             speed = 60f / 11f;
             group = BlockGroup.transportation;
             researchCostMultiplier = 0.02f;
-            shownPlanets.addAll(VeContent.cyclant, VeContent.phoon, VeContent.thavina);
         }};
 
         //endregion
@@ -154,30 +157,41 @@ public class VeAddBlocks{
             ambientSoundVolume = 0.2f;
             legacyReadWarmup = true;
             researchCostMultiplier = 0.01f;
-            drawer = new DrawMulti(new DrawRegion("-bottom"), new DrawLiquidTile(Liquids.water), new DrawCultivator(){{
+
+            drawer = new DrawMulti(
+                    new DrawRegion("-bottom"),
+                    new DrawLiquidTile(Liquids.water),
+                    new DrawCultivator(){{
                 plantColorLight = Color.valueOf("e16049");
                 plantColor = Color.valueOf("ba352b");
                 bottomColor = Color.valueOf("892018");
-            }}, new DrawRegion("-rotator"){{
+            }},
+                    new DrawRegion("-rotator"){{
                 rotateSpeed = -3f;
                 x = -9f;
                 y = 9f;
-            }}, new DrawRegion("-rotator"){{
+            }},
+                    new DrawRegion("-rotator"){{
                 rotateSpeed = -3f;
                 x = 9f;
                 y = 9f;
-            }}, new DrawRegion("-rotator"){{
+            }},
+                    new DrawRegion("-rotator"){{
                 rotateSpeed = -3f;
                 x = -9f;
                 y = -9f;
-            }}, new DrawRegion("-rotator"){{
+            }},
+                    new DrawRegion("-rotator"){{
                 rotateSpeed = -3f;
                 x = 9f;
                 y = -9f;
-            }}, new DrawRegion(), new DrawGlowRegion("-glow"){{
+            }},
+                    new DrawRegion(),
+                    new DrawGlowRegion("-glow"){{
                 color = Color.valueOf("ff8a67");
                 alpha = 0.6f;
-            }});
+            }}
+            );
             // hideDetails = false;
         }};
 
@@ -190,18 +204,26 @@ public class VeAddBlocks{
             outputLiquids = LiquidStack.with(VeContent.chlorine, 9f / 60f, Liquids.hydrogen, 9f / 60f, Liquids.water, 0f);
             regionRotated1 = 3;
             liquidOutputDirections = new int[] {1, 3, 0};
-            drawer = new DrawMulti(new DrawRegion("-bottom"), new DrawLiquidTile(Liquids.water, 2), new DrawBubbles(Color.valueOf("7693e3")){{
+            drawer = new DrawMulti(
+                    new DrawRegion("-bottom"),
+                    new DrawLiquidTile(Liquids.water, 2),
+                    new DrawBubbles(Color.valueOf("7693e3")){{
                 sides = 8;
                 recurrence = 3f;
                 spread = 4f;
                 amount = 15;
-            }}, new DrawLiquidTile(VeContent.chlorine){{
+            }},
+                    new DrawLiquidTile(VeContent.chlorine){{
                 padBottom = 8f;
                 padTop = 0f;
-            }}, new DrawLiquidTile(Liquids.hydrogen){{
+            }},
+                    new DrawLiquidTile(Liquids.hydrogen){{
                 padBottom = 0f;
                 padTop = 8f;
-            }}, new DrawRegion(), new DrawLiquidOutputs(), new DrawGlowRegion("-glow"){{
+            }},
+                    new DrawRegion(),
+                    new DrawLiquidOutputs(),
+                    new DrawGlowRegion("-glow"){{
                 color = Color.valueOf("faffd7");
                 alpha = 0.8f;
             }});
@@ -220,7 +242,6 @@ public class VeAddBlocks{
             ambientSoundVolume = 0.08f;
             craftEffect = Fx.lightning;
             researchCostMultiplier = 0.02f;
-            shownPlanets.addAll(VeContent.cyclant, VeContent.phoon, VeContent.maress, VeContent.thavina);
         }};
 
         sandHoter = new OmniCrafter("sand-hoter"){{
@@ -238,23 +259,39 @@ public class VeAddBlocks{
             itemCapacity = 60;
             ambientSound = Sounds.loopSmelter;
             ambientSoundVolume = 0.08f;
-            drawer = new DrawMulti(new DrawRegion(), new DrawGlowRegion("-glow"){{
+            drawer = new DrawMulti(
+                    new DrawRegion(),
+                    new DrawGlowRegion("-glow"){{
                 alpha = 0.9f;
                 color = Color.valueOf("ffa665");
                 glowScale = 5f;
-            }}, new DrawFlame(Color.valueOf("ffb6a5")));
+            }},
+                    new DrawFlame(Color.valueOf("ffb6a5"))
+            );
             attribute = Attribute.heat;
             boostScale = 0.5f;
             maxBoost = 3f;
             minEfficiency = -1f;
-            shownPlanets.addAll(VeContent.cyclant, VeContent.phoon, VeContent.maress, VeContent.thavina);
+        }};
+
+        fusionHeater = new HeatProducer("fusion-heater"){{
+            requirements(Category.crafting, with(Items.lead, 250, Items.graphite, 200, Items.silicon, 300, Items.surgeAlloy, 500, VeContent.quartz, 70, VeContent.silicide, 180, VeContent.chromium, 100, VeContent.fibralt, 150));
+            size = 4;
+            warmupRate = 0.1f;
+
+            drawer = new DrawMulti(new DrawDefault(), new DrawHeatOutput());
+            heatOutput = 80f;
+            craftTime = 60f * 2f;
+            ambientSound = Sounds.loopHum;
+            consumePower(4000f / 60f);
+            consumeItem(VeContent.fusionFuel);
         }};
 
         //endregion
         //region units
 
         platformThetaPro = new UnitCargoLoader("platform-theta-pro"){{
-            requirements(Category.units, ItemStack.with(Items.lead, 160, Items.silicon, 100, VeContent.aluminium, 200));
+            requirements(Category.units, ItemStack.with(Items.lead, 400, Items.silicon, 100, VeContent.aluminium, 350));
             size = 2;
             buildTime = 900f;
             unitType = UnitTypes.alpha;
@@ -267,7 +304,6 @@ public class VeAddBlocks{
             solid = false;
             underBullets = true;
             researchCostMultiplier = 0.02f;
-            shownPlanets.addAll(VeContent.cyclant, VeContent.phoon, VeContent.maress, VeContent.thavina);
         }};
 
         platformLambdaPro = new UnitCargoLoader("platform-lambda-pro"){{
@@ -276,7 +312,7 @@ public class VeAddBlocks{
             buildTime = 1200f;
             unitType = UnitTypes.alpha;
             consumePower(105f / 60f);
-            consumeLiquid(Liquids.water, 8f / 60f);
+            consumeLiquid(Liquids.water, 16f / 60f);
             itemCapacity = 0;
             hasLiquids = true;
             liquidCapacity = 20f;
@@ -287,7 +323,6 @@ public class VeAddBlocks{
             solid = false;
             underBullets = true;
             researchCostMultiplier = 0.02f;
-            shownPlanets.addAll(VeContent.cyclant, VeContent.phoon, VeContent.maress, VeContent.thavina);
         }};
 
         //endregion
@@ -315,7 +350,6 @@ public class VeAddBlocks{
             canOverdrive = true;
             conductivePower = true;
             outputsPower = true;
-            shownPlanets.addAll(VeContent.maress, VeContent.sitrullus, VeContent.thavina);
         }};
 
         //endregion
