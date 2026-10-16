@@ -1,4 +1,4 @@
-package momijiadd;
+package momijiadd.type.blocks.production;
 
 import arc.Core;
 import arc.Events;
@@ -41,16 +41,14 @@ import mindustry.ui.Fonts;
 import mindustry.ui.Styles;
 import mindustry.world.Block;
 import mindustry.world.Tile;
+import mindustry.world.blocks.heat.HeatBlock;
 import mindustry.world.blocks.heat.HeatConsumer;
-import mindustry.world.blocks.heat.HeatProducer;
 import mindustry.world.blocks.liquid.Conduit;
 import mindustry.world.blocks.payloads.BuildPayload;
 import mindustry.world.blocks.payloads.Payload;
 import mindustry.world.blocks.payloads.PayloadBlock;
 import mindustry.world.blocks.payloads.UnitPayload;
 import mindustry.world.blocks.production.GenericCrafter;
-import mindustry.world.blocks.production.HeatCrafter;
-import mindustry.world.blocks.units.UnitFactory;
 import mindustry.world.consumers.ConsumeItemDynamic;
 import mindustry.world.consumers.ConsumeLiquidsDynamic;
 import mindustry.world.consumers.ConsumePayloadDynamic;
@@ -64,13 +62,13 @@ import java.util.Arrays;
 import static mindustry.Vars.*;
 
 /**
- * 多配方工厂方块，每个配方可独立配置输入/输出/热量/载荷等，
- * 并与原版 {@link GenericCrafter}、{@link HeatProducer}、{@link HeatCrafter}、{@link UnitFactory} 行为对齐。
+ * 多配方工厂方块, 每个配方可独立配置输入/输出/热量/载荷等,
+ * 并与原版 {@code GenericCrafter}、{@code HeatProducer}、{@code HeatCrafter}、{@code UnitFactory} 行为对齐.
  *
- * @author Momiji142857 (with DeepSeek)
+ * @since 2026-05-27
  * @see Block
  * @see GenericCrafter
- * @since 2026-05-27
+ * @author Momiji142857 (with DeepSeek)
  */
 public class MultiCrafter extends Block{
 
@@ -78,9 +76,6 @@ public class MultiCrafter extends Block{
 
     /** 所有可切换的配方列表（JSON 加载后直接赋值） */
     public Recipe[] recipes = {};
-
-    /** 物品容量，-1 自动计算 */
-    public int itemCapacity = -1;
 
     /** 默认的制作特效（配方未配置时使用） */
     public @Nullable Effect craftEffect = Fx.none;
@@ -118,9 +113,14 @@ public class MultiCrafter extends Block{
 
     public MultiCrafter(String name){
         super(name);
+        //注意: 不要在本类中重新声明 itemCapacity 字段, 那会遮蔽 Block.itemCapacity;
+        //引擎是按 block.itemCapacity (静态类型 Block) 读的, 会永远读到默认值 10.
+        //这里直接写继承来的字段, -1 作为"自动计算"哨兵, 在 init() 里换算成实际容量.
+        itemCapacity = -1;
         update = true;
         solid = true;
         hasItems = true;
+        hasPower = true;
         hasLiquids = true;
         ambientSound = Sounds.loopMachine;
         sync = true;
@@ -139,17 +139,17 @@ public class MultiCrafter extends Block{
     //region 初始化
 
     @Override
-    public void init(){
-        Recipe.Recipe_set(this.recipes);
+    public void init() {
+        Recipe.setRecipe(recipes);
 
         // 动态物品消费者：单位配方时按 unitCost 规则缩放物品需求
         consume(new ConsumeItemDynamic((MultiCrafterBuild b) -> {
             Recipe r = b.getCurrentRecipe();
-            if(r == null || r.inputItems == null) return ItemStack.empty;
-            if(!b.isUnitRecipe) return r.inputItems;
+            if (r == null || r.inputItems == null) return ItemStack.empty;
+            if (!b.isUnitRecipe) return r.inputItems;
             float costMul = state.rules.unitCost(b.team);
             ItemStack[] result = new ItemStack[r.inputItems.length];
-            for(int i = 0; i < r.inputItems.length; i++){
+            for (int i = 0; i < r.inputItems.length; i++) {
                 result[i] = new ItemStack(r.inputItems[i].item, Mathf.round(r.inputItems[i].amount * costMul));
             }
             return result;
@@ -166,8 +166,8 @@ public class MultiCrafter extends Block{
 
         // 检测是否有输出电力的配方
         boolean hasOutputPower = false;
-        for(Recipe r : recipes){
-            if(r.outputPower > 0){
+        for (Recipe r : recipes) {
+            if (r.outputPower > 0) {
                 hasOutputPower = true;
                 break;
             }
@@ -176,56 +176,67 @@ public class MultiCrafter extends Block{
 
         // 检测是否有输出液体的配方
         boolean hasOutputLiquid = false;
-        for(Recipe r : recipes){
-            if(r.outputLiquids != null && r.outputLiquids.length > 0){
+        for (Recipe r : recipes) {
+            if (r.outputLiquids != null && r.outputLiquids.length > 0) {
                 hasOutputLiquid = true;
                 break;
             }
         }
         outputsLiquid = hasOutputLiquid;
 
+        // 若所有配方都不允许超速, 直接关掉方块级开关: OverdriveProjector 的 eachBlock 过滤
+        // 条件和 EmpBulletType 都读 Block.canOverdrive, 关掉后会被直接跳过
+        boolean anyOverdrive = false;
+        for (Recipe r : recipes) {
+            if (!(r.outputHeat > 0) && r.allowOverdrive) {
+                anyOverdrive = true;
+                break;
+            }
+        }
+        canOverdrive = anyOverdrive;
+
         // 仅当存在电力需求配方时，注册动态电力消费者
         float maxPower = 0f;
-        for(Recipe r : recipes){
-            if(r.inputPower > maxPower) maxPower = r.inputPower;
+        for (Recipe r : recipes) {
+            if (r.inputPower > maxPower) maxPower = r.inputPower;
         }
-        if(maxPower > 0){
+        if (maxPower > 0) {
             consume(new DynamicConsumePower(maxPower));
         }
 
         // 自动计算物品/液体容量
-        if(itemCapacity < 0){
+        if (itemCapacity < 0) {
             int maxItemCap = 10;
-            for(Recipe r : recipes){
-                if(r.inputItems != null) for(ItemStack s : r.inputItems)
+            for (Recipe r : recipes) {
+                if (r.inputItems != null) for (ItemStack s : r.inputItems)
                     maxItemCap = Math.max(maxItemCap, s.amount * 2);
-                if(r.outputItems != null) for(ItemStack s : r.outputItems)
+                if (r.outputItems != null) for (ItemStack s : r.outputItems)
                     maxItemCap = Math.max(maxItemCap, s.amount * 2);
             }
             itemCapacity = maxItemCap;
         }
-        if(liquidCapacity < 0){
+        if (liquidCapacity < 0) {
             float maxLiquidCap = 1f;
-            for(Recipe r : recipes){
-                if(r.inputLiquids != null) for(LiquidStack stack : r.inputLiquids)
+            for (Recipe r : recipes) {
+                if (r.inputLiquids != null) for (LiquidStack stack : r.inputLiquids)
                     maxLiquidCap = Math.max(maxLiquidCap, stack.amount * 60f);
-                if(r.outputLiquids != null) for(LiquidStack stack : r.outputLiquids)
+                if (r.outputLiquids != null) for (LiquidStack stack : r.outputLiquids)
                     maxLiquidCap = Math.max(maxLiquidCap, stack.amount * 60f);
             }
             liquidCapacity = Mathf.round(10f * maxLiquidCap);
         }
 
-        if(rotate) drawArrow = true;
+        if (rotate) drawArrow = true;
 
         // 载荷输入/输出标志
         boolean hasInputPayload = false;
         boolean hasOutputPayload = false;
-        for(Recipe r : recipes){
-            if(Recipe.haveInputPayloads(r)) hasInputPayload = true;
-            if(Recipe.haveOutputPayloads(r)) hasOutputPayload = true;
+        for (Recipe r : recipes) {
+            if (Recipe.haveInputPayloads(r)) hasInputPayload = true;
+            if (Recipe.haveOutputPayloads(r)) hasOutputPayload = true;
         }
 
-        if(!rotate && hasOutputPayload){
+        if (!rotate && hasOutputPayload) {
             Log.warn("MultiCrafter '@' has payload output recipes, but rotation is disabled. Forcing rotate=true.", name);
             rotate = true;
             drawArrow = true;
@@ -236,7 +247,7 @@ public class MultiCrafter extends Block{
 
         // 配方索引配置
         config(Integer.class, (MultiCrafterBuild build, Integer i) -> {
-            if(build.currentRecipe != i){
+            if (build.currentRecipe != i) {
                 build.switchRecipe(i);
             }
         });
@@ -246,17 +257,17 @@ public class MultiCrafter extends Block{
 
         // 收集所有配方中可能出现的载荷类型
         allPayloadTypes = new Seq<>();
-        for(Recipe r : recipes){
-            if(r.inputPayloads != null){
-                for(PayloadStack stack : r.inputPayloads){
-                    if(!allPayloadTypes.contains(stack.item)){
+        for (Recipe r : recipes) {
+            if (r.inputPayloads != null) {
+                for (PayloadStack stack : r.inputPayloads) {
+                    if (!allPayloadTypes.contains(stack.item)) {
                         allPayloadTypes.add(stack.item);
                     }
                 }
             }
-            if(r.outputPayloads != null){
-                for(PayloadStack stack : r.outputPayloads){
-                    if(!allPayloadTypes.contains(stack.item)){
+            if (r.outputPayloads != null) {
+                for (PayloadStack stack : r.outputPayloads) {
+                    if (!allPayloadTypes.contains(stack.item)) {
                         allPayloadTypes.add(stack.item);
                     }
                 }
@@ -271,31 +282,31 @@ public class MultiCrafter extends Block{
     //region 统计信息
 
     @Override
-    public void setStats(){
+    public void setStats() {
         stats.add(Stat.size, "@x@", size, size);
-        if(synthetic()){
+        if (synthetic()) {
             stats.add(Stat.health, health, StatUnit.none);
-            if(armor > 0) stats.add(Stat.armor, armor, StatUnit.none);
+            if (armor > 0) stats.add(Stat.armor, armor, StatUnit.none);
         }
-        if(canBeBuilt() && requirements.length > 0){
+        if (canBeBuilt() && requirements.length > 0) {
             stats.add(Stat.buildTime, buildTime / 60, StatUnit.seconds);
             stats.add(Stat.buildCost, StatValues.items(false, requirements));
         }
-        if(instantTransfer){
+        if (instantTransfer) {
             stats.add(Stat.maxConsecutive, 2, StatUnit.none);
         }
-        for(var c : consumers){
+        for (var c : consumers) {
             c.display(stats);
         }
-        if(hasLiquids) stats.add(Stat.liquidCapacity, liquidCapacity, StatUnit.liquidUnits);
-        if(hasItems && itemCapacity > 0) stats.add(Stat.itemCapacity, itemCapacity, StatUnit.items);
+        if (hasLiquids) stats.add(Stat.liquidCapacity, liquidCapacity, StatUnit.liquidUnits);
+        if (hasItems && itemCapacity > 0) stats.add(Stat.itemCapacity, itemCapacity, StatUnit.items);
 
         // 显示每个配方的输入/输出/时间/超速
         stats.add(Stat.output, table -> {
             table.clearChildren();
             table.left();
 
-            for(int i = 0; i < recipes.length; i++){
+            for (int i = 0; i < recipes.length; i++) {
                 Recipe rec = recipes[i];
                 int finalI = i;
                 int colspan = Recipe.calcColspan(rec);
@@ -305,13 +316,13 @@ public class MultiCrafter extends Block{
 
                     // 检查输出载荷中的单位状态
                     boolean hasBanned = false, hasLocked = false;
-                    if(rec.outputPayloads != null){
-                        for(PayloadStack stack : rec.outputPayloads){
-                            if(stack.item instanceof UnitType unit){
-                                if(unit.isBanned()){
+                    if (rec.outputPayloads != null) {
+                        for (PayloadStack stack : rec.outputPayloads) {
+                            if (stack.item instanceof UnitType unit) {
+                                if (unit.isBanned()) {
                                     hasBanned = true;
                                     break;
-                                }else if(!unit.unlockedNow()){
+                                } else if (!unit.unlockedNow()) {
                                     hasLocked = true;
                                 }
                             }
@@ -321,52 +332,50 @@ public class MultiCrafter extends Block{
                     t.add("[accent]Recipe " + (finalI + 1) + "[]").colspan(colspan).padTop(4).padBottom(4).left();
                     t.row();
 
-                    if(hasBanned){
+                    if (hasBanned) {
                         t.image(Icon.cancel).color(Pal.remove).size(40f).growX().center();
-                    }else if(hasLocked){
+                    } else if (hasLocked) {
                         t.image(Icon.lock).color(Pal.darkerGray).size(40f).growX().center();
-                    }else{
-                        boolean hasInput = (rec.inputItems != null && !Arrays.equals(rec.inputItems, ItemStack.with())) || (rec.inputLiquids != null && !Arrays.equals(rec.inputLiquids, LiquidStack.with())) || rec.inputPower > 0 || rec.inputHeat > 0 || rec.inputPayloads != null;
-                        if(hasInput){
+                    } else {
+                        boolean hasInput = (rec.inputItems != null && !Arrays.equals(rec.inputItems, ItemStack.with())) || (rec.inputLiquids != null && !Arrays.equals(rec.inputLiquids, LiquidStack.with()))
+                                || rec.inputPower > 0 || rec.inputHeat > 0 || rec.inputPayloads != null;
+                        if (hasInput) {
                             t.add("[lightgray]" + Core.bundle.get("stat.input") + ":[]");
-                            if(rec.inputItems != null && !Arrays.equals(rec.inputItems, ItemStack.with()))
-                                for(ItemStack s : rec.inputItems)
-                                    t.add(StatValues.displayItem(s.item, s.amount, rec.craftTime, true)).pad(5);
-                            if(rec.inputLiquids != null && !Arrays.equals(rec.inputLiquids, LiquidStack.with()))
-                                for(LiquidStack s : rec.inputLiquids)
-                                    t.add(StatValues.displayLiquid(s.liquid, s.amount * 60f, true)).pad(5);
-                            if(rec.inputPayloads != null) for(PayloadStack s : rec.inputPayloads)
+                            if (rec.inputItems != null && !Arrays.equals(rec.inputItems, ItemStack.with())) for (ItemStack s : rec.inputItems)
+                                t.add(StatValues.displayItem(s.item, s.amount, rec.craftTime, true)).pad(5);
+                            if (rec.inputLiquids != null && !Arrays.equals(rec.inputLiquids, LiquidStack.with())) for (LiquidStack s : rec.inputLiquids)
+                                t.add(StatValues.displayLiquid(s.liquid, s.amount * 60f, true)).pad(5);
+                            if (rec.inputPayloads != null) for (PayloadStack s : rec.inputPayloads)
                                 t.add(displayPayload(s.item, s.amount, rec.craftTime, true)).pad(5);
-                            if(rec.inputPower > 0)
+                            if (rec.inputPower > 0)
                                 t.table(p -> StatValues.number(rec.inputPower * 60f, StatUnit.powerSecond).display(p)).pad(5);
-                            if(rec.inputHeat > 0)
+                            if (rec.inputHeat > 0)
                                 t.table(h -> StatValues.number(rec.inputHeat, StatUnit.heatUnits).display(h)).pad(5);
                             t.row();
                         }
 
-                        boolean hasOutput = rec.outputItems != null || rec.outputLiquids != null || rec.outputHeat > 0 || rec.outputPower > 0 || rec.outputPayloads != null;
-                        if(hasOutput){
+                        boolean hasOutput = rec.outputItems != null || rec.outputLiquids != null
+                                || rec.outputHeat > 0 || rec.outputPower > 0 || rec.outputPayloads != null;
+                        if (hasOutput) {
                             t.add("[lightgray]" + Core.bundle.get("stat.output") + ":[]");
-                            if(rec.outputItems != null) for(ItemStack s : rec.outputItems)
+                            if (rec.outputItems != null) for (ItemStack s : rec.outputItems)
                                 t.add(StatValues.displayItem(s.item, s.amount, rec.craftTime, true)).pad(5);
-                            if(rec.outputLiquids != null) for(LiquidStack s : rec.outputLiquids)
+                            if (rec.outputLiquids != null) for (LiquidStack s : rec.outputLiquids)
                                 t.add(StatValues.displayLiquid(s.liquid, s.amount * 60f, true)).pad(5);
-                            if(rec.outputPayloads != null) for(PayloadStack s : rec.outputPayloads)
+                            if (rec.outputPayloads != null) for (PayloadStack s : rec.outputPayloads)
                                 t.add(displayPayload(s.item, s.amount, rec.craftTime, true)).pad(5);
-                            if(rec.outputPower > 0)
+                            if (rec.outputPower > 0)
                                 t.table(p -> StatValues.number(rec.outputPower * 60f, StatUnit.powerSecond).display(p)).pad(5);
-                            if(rec.outputHeat > 0)
+                            if (rec.outputHeat > 0)
                                 t.table(h -> StatValues.number(rec.outputHeat, StatUnit.heatUnits).display(h)).pad(5);
                             t.row();
                         }
 
-                        boolean canOverdrive = !(rec.outputHeat > 0) && rec.allowOverdrive;
+                        boolean overdriveAllowed = !(rec.outputHeat > 0) && rec.allowOverdrive;
                         t.table(info -> {
                             info.left();
                             info.add("[lightgray]" + Core.bundle.get("stat.productiontime") + ":[] " + Strings.autoFixed(rec.craftTime / 60f, 3) + " " + Core.bundle.get("unit.seconds"));
-                            info.add("  [lightgray]能否超速:[] " + (canOverdrive ? Core.bundle.get("yes") : Core.bundle.get("no")));
-                            if(maxEfficiency > 1 && rec.inputHeat > 0)
-                                info.add("  [lightgray]最大效率:[] " + Strings.autoFixed(maxEfficiency * 100f, 1) + "%");
+                            info.add("  [lightgray]能否超速:[] " + (overdriveAllowed ? Core.bundle.get("yes") : Core.bundle.get("no")));
                         }).colspan(colspan).padTop(4).left();
                     }
                 }).growX().pad(5).row();
@@ -379,72 +388,89 @@ public class MultiCrafter extends Block{
     //region 状态栏
 
     @Override
-    public void setBars(){
+    public void setBars() {
         addBar("health", entity -> new Bar("stat.health", Pal.health, entity::healthf).blink(Color.white));
 
         // 电力输入条
         addBar("powerInput", (MultiCrafterBuild e) -> {
             Recipe r = e.getCurrentRecipe();
-            if(r == null || r.inputPower <= 0) return null;
-            return new Bar(() -> {
-                float recipePower = r.inputPower * 60f;
-                float status = e.power.status;
-                float available = recipePower * status;
-                if(status >= 1f && e.efficiency >= 1f)
-                    return StatUnit.powerSecond.icon + "- " + powerFmtNum(recipePower);
-                return StatUnit.powerSecond.icon + "- " + powerFmtNum(available) + "/" + fmtNum(recipePower) + " [lightgray]| " + Strings.autoFixed(e.efficiency * 100, 1) + "%[]";
-            }, () -> Pal.powerBar, () -> e.power.status);
+            if (r == null || r.inputPower <= 0) return null;
+            return new Bar(
+                    () -> {
+                        //超速会提高每秒耗电, 显示方式与原版 PowerGenerator/ImpactReactor 一致
+                        float recipePower = r.inputPower * 60f * e.timeScale();
+                        float status = e.power.status;
+                        float available = recipePower * status;
+                        if (status >= 1f && e.efficiency >= 1f)
+                            return StatUnit.powerSecond.icon + "- " + powerFmtNum(recipePower);
+                        return StatUnit.powerSecond.icon + "- " +
+                                powerFmtNum(available) + "/" + fmtNum(recipePower) +
+                                " [lightgray]| " + Strings.autoFixed(e.efficiency * 100, 1) + "%[]";
+                    },
+                    () -> Pal.powerBar,
+                    () -> e.power.status
+            );
         });
 
         // 电力输出条
         addBar("powerOutput", (MultiCrafterBuild e) -> {
             Recipe r = e.getCurrentRecipe();
-            if(r == null || r.outputPower <= 0) return null;
-            return new Bar(() -> {
-                float recipeOutput = r.outputPower * 60f;
-                float actualOutput = e.getPowerProduction();
-                if(e.efficiency >= 1f) return StatUnit.powerSecond.icon + "+ " + powerFmtNum(recipeOutput);
-                return StatUnit.powerSecond.icon + "+ " + powerFmtNum(actualOutput) + "/" + fmtNum(recipeOutput) + " [lightgray]| " + Strings.autoFixed(e.efficiency * 100, 1) + "%[]";
-            }, () -> Pal.powerBar, () -> e.efficiency);
+            if (r == null || r.outputPower <= 0) return null;
+            return new Bar(
+                    () -> {
+                        //超速同样影响实际产出
+                        float recipeOutput = r.outputPower * 60f * e.timeScale();
+                        //getPowerProduction() 返回的是每 tick 的量, 需要 *60 换算成每秒
+                        float actualOutput = e.getPowerProduction() * 60f * e.timeScale();
+                        if (e.efficiency >= 1f)
+                            return StatUnit.powerSecond.icon + "+ " + powerFmtNum(recipeOutput);
+                        return StatUnit.powerSecond.icon + "+ " +
+                                powerFmtNum(actualOutput) + "/" + fmtNum(recipeOutput) +
+                                " [lightgray]| " + Strings.autoFixed(e.efficiency * 100, 1) + "%[]";
+                    },
+                    () -> Pal.powerBar,
+                    () -> e.efficiency
+            );
         });
 
         // 物品存储条
         addBar("items", (MultiCrafterBuild e) -> {
             Recipe r = e.getCurrentRecipe();
-            if(r == null || (!Recipe.haveItems(r) && e.items.total() == 0)) return null;
-            return new Bar(() -> Core.bundle.format("bar.items", e.items.total()), () -> Pal.items, () -> (float) e.items.total() / itemCapacity);
+            if (r == null || (!Recipe.haveItems(r) && e.items.total() == 0)) return null;
+            return new Bar(
+                    () -> Core.bundle.format("bar.items", e.items.total()),
+                    () -> Pal.items,
+                    () -> (float) e.items.total() / itemCapacity
+            );
         });
 
         // 液体存储条
         ObjectSet<Liquid> allLiquids = new ObjectSet<>();
-        for(Recipe r : recipes){
-            if(r.inputLiquids != null) for(LiquidStack stack : r.inputLiquids) allLiquids.add(stack.liquid);
-            if(r.outputLiquids != null) for(LiquidStack stack : r.outputLiquids) allLiquids.add(stack.liquid);
+        for (Recipe r : recipes) {
+            if (r.inputLiquids != null) for (LiquidStack stack : r.inputLiquids) allLiquids.add(stack.liquid);
+            if (r.outputLiquids != null) for (LiquidStack stack : r.outputLiquids) allLiquids.add(stack.liquid);
         }
         int liqIdx = 0;
-        for(Liquid liq : allLiquids){
+        for (Liquid liq : allLiquids) {
             addBar("liquid" + liqIdx, (MultiCrafterBuild e) -> {
                 Recipe r = e.getCurrentRecipe();
-                if(r == null || !Recipe.haveLiquids(r)) return null;
+                if (r == null || !Recipe.haveLiquids(r)) return null;
                 boolean found = false;
-                if(r.inputLiquids != null) for(LiquidStack s : r.inputLiquids)
-                    if(s.liquid == liq){
-                        found = true;
-                        break;
-                    }
-                if(!found && r.outputLiquids != null) for(LiquidStack s : r.outputLiquids)
-                    if(s.liquid == liq){
-                        found = true;
-                        break;
-                    }
-                if(!found) return null;
-                return new Bar(() -> {
-                    float current = e.liquids.get(liq);
-                    float fill = current / liquidCapacity;
-                    String icon = " " + Fonts.getUnicodeStr(liq.name);
-                    if(fill > 0.99f) return liq.localizedName + icon + " " + fmtNum(current);
-                    return liq.localizedName + icon + " " + fmtNum(current) + "/" + fmtNum(liquidCapacity) + " [lightgray]| " + Strings.autoFixed(fill * 100f, 1) + "%[]";
-                }, liq::barColor, () -> e.liquids.get(liq) / liquidCapacity);
+                if (r.inputLiquids != null) for (LiquidStack s : r.inputLiquids) if (s.liquid == liq) { found = true; break; }
+                if (!found && r.outputLiquids != null) for (LiquidStack s : r.outputLiquids) if (s.liquid == liq) { found = true; break; }
+                if (!found) return null;
+                return new Bar(
+                        () -> {
+                            float current = e.liquids.get(liq);
+                            float fill = current / liquidCapacity;
+                            String icon = " " + Fonts.getUnicodeStr(liq.name);
+                            if (fill > 0.99f) return liq.localizedName + icon + " " + fmtNum(current);
+                            return liq.localizedName  + icon + " " + fmtNum(current) + "/" + fmtNum(liquidCapacity)
+                                    + " [lightgray]| " + Strings.autoFixed(fill * 100f, 1) + "%[]";
+                        },
+                        liq::barColor,
+                        () -> e.liquids.get(liq) / liquidCapacity
+                );
             });
             liqIdx++;
         }
@@ -452,93 +478,113 @@ public class MultiCrafter extends Block{
         // 热量输入/输出条
         addBar("heatInput", (MultiCrafterBuild e) -> {
             Recipe r = e.getCurrentRecipe();
-            if(r == null || r.inputHeat <= 0) return null;
-            return new Bar(() -> {
-                boolean hasOutput = r.outputHeat > 0;
-                String label = hasOutput ? Core.bundle.get("stat.input") + Core.bundle.get("bar.heat") : Core.bundle.get("bar.heat");
-                float heatVal = e.heat;
-                float heatReq = r.inputHeat;
-                if(heatVal > heatReq)
-                    return label + " " + fmtNum(heatVal) + " [lightgray]| " + Strings.autoFixed(e.efficiencyScale() * 100f, 1) + "%[]";
-                return label + " " + fmtNum(heatVal) + "/" + fmtNum(heatReq) + " [lightgray]| " + Strings.autoFixed(e.efficiencyScale() * 100f, 1) + "%[]";
-            }, () -> Pal.lightOrange, () -> e.heat / r.inputHeat);
+            if (r == null || r.inputHeat <= 0) return null;
+            return new Bar(
+                    () -> {
+                        boolean hasOutput = r.outputHeat > 0;
+                        String label = hasOutput ? Core.bundle.get("stat.input") + Core.bundle.get("bar.heat") : Core.bundle.get("bar.heat");
+                        float heatVal = e.heat;
+                        float heatReq = r.inputHeat;
+                        if (heatVal > heatReq)
+                            return label + " " + fmtNum(heatVal) + " [lightgray]| " + Strings.autoFixed(e.efficiencyScale() * 100f, 1) + "%[]";
+                        return label + " " + fmtNum(heatVal) + "/" + fmtNum(heatReq)
+                                + " [lightgray]| " + Strings.autoFixed(e.efficiencyScale() * 100f, 1) + "%[]";
+                    },
+                    () -> Pal.lightOrange,
+                    () -> e.heat / r.inputHeat
+            );
         });
         addBar("heatOutput", (MultiCrafterBuild e) -> {
             Recipe r = e.getCurrentRecipe();
-            if(r == null || r.outputHeat <= 0) return null;
-            return new Bar(() -> {
-                boolean hasInput = r.inputHeat > 0;
-                String label = hasInput ? Core.bundle.get("stat.output") + Core.bundle.get("bar.heat") : Core.bundle.get("bar.heat");
-                float heatVal = e.heatOutput;
-                float heatReq = r.outputHeat;
-                if(heatVal >= heatReq) return label + " " + fmtNum(heatVal) + " (100%)";
-                return label + " " + fmtNum(heatVal) + "/" + fmtNum(heatReq) + " [lightgray]| " + Strings.autoFixed(heatVal / heatReq * 100f, 1) + "%[]";
-            }, () -> Pal.lightOrange, () -> e.heatOutput / r.outputHeat);
+            if (r == null || r.outputHeat <= 0) return null;
+            return new Bar(
+                    () -> {
+                        boolean hasInput = r.inputHeat > 0;
+                        String label = hasInput ? Core.bundle.get("stat.output") + Core.bundle.get("bar.heat") : Core.bundle.get("bar.heat");
+                        float heatVal = e.heatOutput;
+                        float heatReq = r.outputHeat;
+                        if (heatVal >= heatReq)
+                            return label + " " + fmtNum(heatVal) + " (100%)";
+                        return label + " " + fmtNum(heatVal) + "/" + fmtNum(heatReq)
+                                + " [lightgray]| " + Strings.autoFixed(heatVal / heatReq * 100f, 1) + "%[]";
+                    },
+                    () -> Pal.lightOrange,
+                    () -> e.heatOutput / r.outputHeat
+            );
         });
 
         // 单位上限条
         ObjectSet<UnitType> unitTypes = new ObjectSet<>();
-        for(Recipe r : recipes){
-            if(r.outputPayloads != null){
-                for(PayloadStack stack : r.outputPayloads){
-                    if(stack.item instanceof UnitType ut) unitTypes.add(ut);
+        for (Recipe r : recipes) {
+            if (r.outputPayloads != null) {
+                for (PayloadStack stack : r.outputPayloads) {
+                    if (stack.item instanceof UnitType ut) unitTypes.add(ut);
                 }
             }
         }
         int idx = 0;
-        for(UnitType type : unitTypes){
+        for (UnitType type : unitTypes) {
             addBar("unitOutput" + idx, (MultiCrafterBuild e) -> {
                 Recipe r = e.getCurrentRecipe();
-                if(r == null || !Recipe.haveOutputPayloads(r)) return null;
+                if (r == null || !Recipe.haveOutputPayloads(r)) return null;
                 boolean found = false;
-                for(PayloadStack s : r.outputPayloads){
-                    if(s.item == type){
-                        found = true;
-                        break;
-                    }
+                for (PayloadStack s : r.outputPayloads) {
+                    if (s.item == type) { found = true; break; }
                 }
-                if(!found) return null;
-                return new Bar(() -> Core.bundle.format("bar.unitcap", Fonts.getUnicodeStr(type.name), e.team.data().countType(type), type.useUnitCap ? Units.getStringCap(e.team) : "∞"), () -> Pal.power, () -> type.useUnitCap ? (float) e.team.data().countType(type) / Units.getCap(e.team) : 1f);
+                if (!found) return null;
+                return new Bar(
+                        () -> Core.bundle.format("bar.unitcap",
+                                Fonts.getUnicodeStr(type.name),
+                                e.team.data().countType(type),
+                                type.useUnitCap ? Units.getStringCap(e.team) : "∞"
+                        ),
+                        () -> Pal.power,
+                        () -> type.useUnitCap ? (float) e.team.data().countType(type) / Units.getCap(e.team) : 1f
+                );
             });
             idx++;
         }
 
         // 生产进度条
-        addBar("progress", (MultiCrafterBuild e) -> new Bar(() -> {
-            String icon;
-            Recipe r = e.getCurrentRecipe();
-            if(r != null && r.outputPayloads != null && r.outputPayloads.length > 0){
-                icon = String.valueOf(Iconc.units);
-            }else if(r != null && r.outputPower > 0){
-                icon = String.valueOf(Iconc.power);
-            }else{
-                icon = String.valueOf(Iconc.crafting);
-            }
-            float p = e.progress();
-            float aps = e.getActualProgressPerSecond();
-            float remainSec = aps > 0.00001f ? (1f - p) / aps : 5994f;
+        addBar("progress", (MultiCrafterBuild e) -> new Bar(
+                () -> {
+                    String icon;
+                    Recipe r = e.getCurrentRecipe();
+                    if (r != null && r.outputPayloads != null && r.outputPayloads.length > 0) {
+                        icon = String.valueOf(Iconc.units);
+                    } else if (r != null && r.outputPower > 0) {
+                        icon = String.valueOf(Iconc.power);
+                    } else {
+                        icon = String.valueOf(Iconc.crafting);
+                    }
+                    float p = e.progress();
+                    float aps = e.getActualProgressPerSecond();
+                    float remainSec = aps > 0.00001f ? (1f - p) / aps : 5994f;
 
-            String timeStr;
-            if(remainSec >= 60f){
-                timeStr = Strings.autoFixed(remainSec / 60f, 2) + "[]min";
-            }else{
-                timeStr = Strings.autoFixed(remainSec, 2) + "[]s";
-            }
-            return icon + " " + (int) (p * 100) + "% [orange]" + timeStr;
-        }, () -> Pal.ammo, e::progress));
+                    String timeStr;
+                    if (remainSec >= 60f) {
+                        timeStr = Strings.autoFixed(remainSec / 60f, 2) + "[]min";
+                    } else {
+                        timeStr = Strings.autoFixed(remainSec, 2) + "[]s";
+                    }
+                    return icon + " " + (int) (p * 100) + "% [orange]" + timeStr;
+                },
+                () -> Pal.ammo,
+                e::progress
+        ));
     }
 
     @Override
-    public boolean rotatedOutput(int fromX, int fromY, Tile destination){
-        if(!(destination.build instanceof Conduit.ConduitBuild)) return false;
+    public boolean rotatedOutput(int fromX, int fromY, Tile destination) {
+        if (!(destination.build instanceof Conduit.ConduitBuild)) return false;
         Building crafter = world.build(fromX, fromY);
-        if(crafter == null) return false;
-        if(crafter instanceof MultiCrafterBuild build){
+        if (crafter == null) return false;
+        if (crafter instanceof MultiCrafterBuild build) {
             Recipe rec = build.getCurrentRecipe();
-            if(rec == null || rec.outputLiquids == null) return false;
+            if (rec == null || rec.outputLiquids == null) return false;
             int relative = Mathf.mod(crafter.relativeTo(destination) - crafter.rotation, 4);
-            for(int dir : rec.liquidOutputDirections){
-                if(dir == -1 || dir == relative) return false;
+            for (int dir : rec.liquidOutputDirections) {
+                if (dir == -1 || dir == relative) return false;
             }
         }
         return true;
@@ -548,35 +594,37 @@ public class MultiCrafter extends Block{
 
     //region 工具方法
 
-    private static String fmtNum(float value){
+    private static String fmtNum(float value) {
         float abs = Math.abs(value);
-        if(abs >= 1000f) return UI.formatAmount((long) value);
-        if(abs >= 10f) return Strings.fixed(value, 1);
-        if(abs >= 0.01f) return Strings.fixed(value, 2);
-        if(abs == 0f) return "0";
-        if(abs < 0.000_001f) return "0.00";
+        if (abs >= 1000f) return UI.formatAmount((long) value);
+        if (abs >= 10f) return Strings.fixed(value, 1);
+        if (abs >= 0.01f) return Strings.fixed(value, 2);
+        if (abs == 0f) return "0";
+        if (abs < 0.000_001f) return "0.00";
         int exponent = (int) Math.floor(Math.log10(abs));
         float mantissa = (float) (value / Math.pow(10, exponent));
         mantissa = Mathf.round(mantissa, 2);
         return mantissa + "[lightgray]E" + exponent + "[]";
     }
 
-    private static String powerFmtNum(float value){
+    private static String powerFmtNum(float value) {
         float abs = Math.abs(value);
-        if(abs >= 1_000_000f) return UI.formatAmount((long) value);
-        if(abs >= 0.01f) return Strings.autoFixed(value, 2);
-        if(abs == 0f) return "0";
-        if(abs < 0.000_001f) return "0";
+        if (abs >= 1_000_000f) return UI.formatAmount((long) value);
+        if (abs >= 0.01f) return Strings.autoFixed(value, 2);
+        if (abs == 0f) return "0";
+        if (abs < 0.000_001f) return "0";
         int exponent = (int) Math.floor(Math.log10(abs));
         float mantissa = (float) (value / Math.pow(10, exponent));
         mantissa = Mathf.round(mantissa, 2);
         return mantissa + "[lightgray]E" + exponent + "[]";
     }
 
-    public static Table displayPayload(UnlockableContent content, int amount, float craftTime, boolean showName){
+    public static Table displayPayload(UnlockableContent content, int amount, float craftTime, boolean showName) {
         Table t = new Table();
         t.add(StatValues.stack(content, amount, !showName));
-        t.add((showName ? content.localizedName + "\n" : "") + "[lightgray]" + Strings.autoFixed(amount / (craftTime / 60f), 3) + StatUnit.perSecond.localized()).padLeft(2).padRight(5).style(Styles.outlineLabel);
+        t.add((showName ? content.localizedName + "\n" : "") +
+                "[lightgray]" + Strings.autoFixed(amount / (craftTime / 60f), 3) +
+                StatUnit.perSecond.localized()).padLeft(2).padRight(5).style(Styles.outlineLabel);
         return t;
     }
 
@@ -607,28 +655,44 @@ public class MultiCrafter extends Block{
 
     @Override
     public void drawOverlay(float x, float y, int rotation){
-        Building b = world.buildWorld(x, y);
-        if(!(b instanceof MultiCrafterBuild build)) return;
+        Recipe rec = null;
 
-        Recipe rec = build.getCurrentRecipe();
+        Building b = world.buildWorld(x, y);
+        if(b instanceof MultiCrafterBuild build){
+            //已建成的建筑: 用它当前的配方
+            rec = build.getCurrentRecipe();
+        }else if(recipes.length > 0){
+            //放置预览: 新建筑会被套用 block.lastConfig (见 Block.nextConfig / InputHandler), 为空则用默认的 0 号配方
+            int idx = (lastConfig instanceof Integer i && i >= 0 && i < recipes.length) ? i : 0;
+            rec = recipes[idx];
+        }
+
         if(rec == null || rec.outputLiquids == null) return;
 
         for(int i = 0; i < rec.outputLiquids.length; i++){
             int dir = rec.liquidOutputDirections.length > i ? rec.liquidOutputDirections[i] : -1;
             if(dir != -1){
-                Draw.rect(rec.outputLiquids[i].liquid.fullIcon, x + Geometry.d4x(dir + rotation) * (size * tilesize / 2f + 4), y + Geometry.d4y(dir + rotation) * (size * tilesize / 2f + 4), 8f, 8f);
+                Draw.rect(
+                        rec.outputLiquids[i].liquid.fullIcon,
+                        x + Geometry.d4x(dir + rotation) * (size * tilesize / 2f + 4),
+                        y + Geometry.d4y(dir + rotation) * (size * tilesize / 2f + 4),
+                        8f, 8f
+                );
             }
         }
     }
 
     @Override
-    public boolean outputsItems(){
+    public boolean outputsItems() {
         return super.outputsItems();
     }
 
     @Override
     public void afterPatch(){
         super.afterPatch();
+
+        // 配方可能被 patch 替换过, 先展开 inputItem/outputItem 这类简写, 再重新推导下面的方块级标志
+        Recipe.setRecipe(recipes);
 
         boolean anyItem = false, anyLiquid = false, anyPower = false;
         boolean anyOutputPayload = false, anyInputPayload = false;
@@ -648,6 +712,16 @@ public class MultiCrafter extends Block{
         hasPower = anyPower;
         outputsLiquid = anyLiquid;
         outputsPayload = anyOutputPayload;
+
+        // 配方可能被 patch 改过, 重新推导方块级"能否超速"
+        boolean anyOverdrive = false;
+        for (Recipe r : recipes) {
+            if (!(r.outputHeat > 0) && r.allowOverdrive) {
+                anyOverdrive = true;
+                break;
+            }
+        }
+        canOverdrive = anyOverdrive;
         acceptsPayload = anyInputPayload;
         acceptsUnitPayloads = anyInputPayload;
 
@@ -658,7 +732,7 @@ public class MultiCrafter extends Block{
 
     //region 配方定义
 
-    public static class Recipe{
+    public static class Recipe {
         public @Nullable ItemStack[] inputItems;
         public @Nullable LiquidStack[] inputLiquids;
         public float inputPower;
@@ -694,143 +768,142 @@ public class MultiCrafter extends Block{
         public @Nullable ItemStack inputItem;
         public @Nullable LiquidStack inputLiquid;
 
-        public static void Recipe_set(Recipe[] recipes){
-            for(Recipe r : recipes){
-                if(r.inputItems == null && r.inputItem != null) r.inputItems = new ItemStack[] {r.inputItem};
-                if(r.inputLiquids == null && r.inputLiquid != null) r.inputLiquids = new LiquidStack[] {r.inputLiquid};
-                if(r.outputItems == null && r.outputItem != null) r.outputItems = new ItemStack[] {r.outputItem};
-                if(r.outputLiquids == null && r.outputLiquid != null)
-                    r.outputLiquids = new LiquidStack[] {r.outputLiquid};
-                if(r.outputLiquid == null && r.outputLiquids != null && r.outputLiquids.length > 0)
+        public static void setRecipe(Recipe[] recipes) {
+            for (Recipe r : recipes) {
+                if (r.inputItems == null && r.inputItem != null)
+                    r.inputItems = new ItemStack[]{r.inputItem};
+                if (r.inputLiquids == null && r.inputLiquid != null)
+                    r.inputLiquids = new LiquidStack[]{r.inputLiquid};
+                if (r.outputItems == null && r.outputItem != null)
+                    r.outputItems = new ItemStack[]{r.outputItem};
+                if (r.outputLiquids == null && r.outputLiquid != null)
+                    r.outputLiquids = new LiquidStack[]{r.outputLiquid};
+                if (r.outputLiquid == null && r.outputLiquids != null && r.outputLiquids.length > 0)
                     r.outputLiquid = r.outputLiquids[0];
             }
         }
 
-        public static boolean havePower(Recipe r){return r.inputPower > 0 || r.outputPower > 0;}
+        public static boolean havePower(Recipe r) { return r.inputPower > 0 || r.outputPower > 0; }
+        public static boolean haveItems(Recipe r) { return (r.inputItems != null && r.inputItems.length > 0) || (r.outputItems != null && r.outputItems.length > 0); }
+        public static boolean haveLiquids(Recipe r) { return (r.inputLiquids != null && r.inputLiquids.length > 0) || (r.outputLiquids != null && r.outputLiquids.length > 0); }
+        public static boolean haveInputPayloads(Recipe r) { return r.inputPayloads != null && r.inputPayloads.length > 0; }
+        public static boolean haveOutputPayloads(Recipe r) { return r.outputPayloads != null && r.outputPayloads.length > 0; }
 
-        public static boolean haveItems(Recipe r){return (r.inputItems != null && r.inputItems.length > 0) || (r.outputItems != null && r.outputItems.length > 0);}
-
-        public static boolean haveLiquids(Recipe r){return (r.inputLiquids != null && r.inputLiquids.length > 0) || (r.outputLiquids != null && r.outputLiquids.length > 0);}
-
-        public static boolean haveInputPayloads(Recipe r){return r.inputPayloads != null && r.inputPayloads.length > 0;}
-
-        public static boolean haveOutputPayloads(Recipe r){return r.outputPayloads != null && r.outputPayloads.length > 0;}
-
-        private static int calcColspan(Recipe rec){
+        private static int calcColspan(Recipe rec) {
             int inputCount = 0, outputCount = 0;
-            if(rec.inputItems != null) inputCount += rec.inputItems.length;
-            if(rec.inputLiquids != null) inputCount += rec.inputLiquids.length;
-            if(rec.inputPayloads != null) inputCount += rec.inputPayloads.length;
+            if (rec.inputItems != null) inputCount += rec.inputItems.length;
+            if (rec.inputLiquids != null) inputCount += rec.inputLiquids.length;
+            if (rec.inputPayloads != null) inputCount += rec.inputPayloads.length;
             inputCount += 2;
-            if(rec.outputItems != null) outputCount += rec.outputItems.length;
-            if(rec.outputLiquids != null) outputCount += rec.outputLiquids.length;
-            if(rec.outputPayloads != null) outputCount += rec.outputPayloads.length;
+            if (rec.outputItems != null) outputCount += rec.outputItems.length;
+            if (rec.outputLiquids != null) outputCount += rec.outputLiquids.length;
+            if (rec.outputPayloads != null) outputCount += rec.outputPayloads.length;
             outputCount += 2;
             return Math.max(1, Math.max(inputCount, outputCount)) + 2;
         }
 
         // ============ 便捷构建方法 ============
 
-        public Recipe consumeItem(Item item, int amount){
+        public Recipe consumeItem(Item item, int amount) {
             inputItems = addToArray(inputItems, new ItemStack(item, amount));
             return this;
         }
 
-        public Recipe consumeItems(ItemStack... stacks){
-            for(ItemStack stack : stacks){
+        public Recipe consumeItems(ItemStack... stacks) {
+            for (ItemStack stack : stacks) {
                 inputItems = addToArray(inputItems, stack);
             }
             return this;
         }
 
-        public Recipe consumeLiquid(Liquid liquid, float amount){
+        public Recipe consumeLiquid(Liquid liquid, float amount) {
             inputLiquids = addToArray(inputLiquids, new LiquidStack(liquid, amount));
             return this;
         }
 
-        public Recipe consumeLiquids(LiquidStack... stacks){
-            for(LiquidStack stack : stacks){
+        public Recipe consumeLiquids(LiquidStack... stacks) {
+            for (LiquidStack stack : stacks) {
                 inputLiquids = addToArray(inputLiquids, stack);
             }
             return this;
         }
 
-        public Recipe consumePower(float powerPerTick){
+        public Recipe consumePower(float powerPerTick) {
             inputPower = powerPerTick;
             return this;
         }
 
-        public Recipe consumeHeat(float heat){
+        public Recipe consumeHeat(float heat) {
             inputHeat = heat;
             return this;
         }
 
-        public Recipe consumePayload(UnlockableContent item, int amount){
+        public Recipe consumePayload(UnlockableContent item, int amount) {
             inputPayloads = addToArray(inputPayloads, new PayloadStack(item, amount));
             return this;
         }
 
-        public Recipe consumePayloads(PayloadStack... stacks){
-            for(PayloadStack stack : stacks){
+        public Recipe consumePayloads(PayloadStack... stacks) {
+            for (PayloadStack stack : stacks) {
                 inputPayloads = addToArray(inputPayloads, stack);
             }
             return this;
         }
 
-        public Recipe outputItem(Item item, int amount){
+        public Recipe outputItem(Item item, int amount) {
             outputItems = addToArray(outputItems, new ItemStack(item, amount));
             return this;
         }
 
-        public Recipe outputItems(ItemStack... stacks){
-            for(ItemStack stack : stacks){
+        public Recipe outputItems(ItemStack... stacks) {
+            for (ItemStack stack : stacks) {
                 outputItems = addToArray(outputItems, stack);
             }
             return this;
         }
 
-        public Recipe outputLiquid(Liquid liquid, float amount){
+        public Recipe outputLiquid(Liquid liquid, float amount) {
             outputLiquids = addToArray(outputLiquids, new LiquidStack(liquid, amount));
             return this;
         }
 
-        public Recipe outputLiquids(LiquidStack... stacks){
-            for(LiquidStack stack : stacks){
+        public Recipe outputLiquids(LiquidStack... stacks) {
+            for (LiquidStack stack : stacks) {
                 outputLiquids = addToArray(outputLiquids, stack);
             }
             return this;
         }
 
-        public Recipe outputPower(float power){
+        public Recipe outputPower(float power) {
             outputPower = power;
             return this;
         }
 
-        public Recipe outputHeat(float heat){
+        public Recipe outputHeat(float heat) {
             outputHeat = heat;
             return this;
         }
 
-        public Recipe outputPayload(UnlockableContent item, int amount){
+        public Recipe outputPayload(UnlockableContent item, int amount) {
             outputPayloads = addToArray(outputPayloads, new PayloadStack(item, amount));
             return this;
         }
 
-        public Recipe outputPayloads(PayloadStack... stacks){
-            for(PayloadStack stack : stacks){
+        public Recipe outputPayloads(PayloadStack... stacks) {
+            for (PayloadStack stack : stacks) {
                 outputPayloads = addToArray(outputPayloads, stack);
             }
             return this;
         }
 
         @SuppressWarnings("unchecked")
-        private static <T> T[] addToArray(T[] original, T element){
-            if(original == null){
+        private static <T> T[] addToArray(T[] original, T element) {
+            if (original == null) {
                 T[] arr = (T[]) java.lang.reflect.Array.newInstance(element.getClass(), 1);
                 arr[0] = element;
                 return arr;
             }
-            T[] newArray = java.util.Arrays.copyOf(original, original.length + 1);
+            T[] newArray = Arrays.copyOf(original, original.length + 1);
             newArray[original.length] = element;
             return newArray;
         }
@@ -840,7 +913,7 @@ public class MultiCrafter extends Block{
 
     //region 建筑实体
 
-    public class MultiCrafterBuild extends Building implements HeatConsumer{
+    public class MultiCrafterBuild extends Building implements HeatBlock, HeatConsumer{
 
         // ---- 配方 ----
         public int currentRecipe;
@@ -848,7 +921,8 @@ public class MultiCrafter extends Block{
 
         // ---- 配方派生属性缓存 ----
         public float craftTime = 80f;
-        public boolean canOverdrive = true;
+        /** 当前配方是否允许被超速, 由 refreshFromRecipe() 从配方推导 (注意与 Block.canOverdrive 区分) */
+        public boolean overdriveAllowed = true;
         public float warmupSpeed = 0.019f;
         public @Nullable Effect currentCraftEffect;
         public @Nullable Effect currentUpdateEffect;
@@ -875,13 +949,16 @@ public class MultiCrafter extends Block{
         public PayloadSeq inputPayloads = new PayloadSeq();
         private final Seq<PayloadStack> cachedInputPayloadSeq = new Seq<>();
         public final Seq<Payload> outputPayloads = new Seq<>();
+        /** 是否正被载荷搬运 (与 PayloadBlockBuild.carried 同义), 被搬走时不应吐出内部载荷 */
+        public boolean carried;
         private Recipe lastRecipe;
 
         // ---- 载荷移动动画 ----
         private final Vec2 payVector = new Vec2();
         private float payRotation;
         public final float payloadSpeed = 0.7f;
-        public final float payloadRotateSpeed = 5f;
+        /** 与原版 PayloadBlock 一致 (3f) */
+        public final float payloadRotateSpeed = 3f;
 
         // ---- 单位指令 ----
         public @Nullable Vec2 commandPos;
@@ -899,15 +976,13 @@ public class MultiCrafter extends Block{
 
         // ============ 公共访问 ============
 
-        public Recipe getCurrentRecipe(){
-            return currentRecipeObj;
-        }
+        public Recipe getCurrentRecipe() { return currentRecipeObj; }
 
-        public Seq<PayloadStack> getInputPayloadSeq(){
-            if(lastRecipe == currentRecipeObj) return cachedInputPayloadSeq;
+        public Seq<PayloadStack> getInputPayloadSeq() {
+            if (lastRecipe == currentRecipeObj) return cachedInputPayloadSeq;
             lastRecipe = currentRecipeObj;
             cachedInputPayloadSeq.clear();
-            if(currentRecipeObj != null && currentRecipeObj.inputPayloads != null)
+            if (currentRecipeObj != null && currentRecipeObj.inputPayloads != null)
                 cachedInputPayloadSeq.addAll(currentRecipeObj.inputPayloads);
             return cachedInputPayloadSeq;
         }
@@ -915,66 +990,78 @@ public class MultiCrafter extends Block{
         // ============ 核心更新 ============
 
         @Override
-        public void updateTile(){
-            if(currentRecipeObj != null && currentRecipeObj.inputHeat > 0) heat = calculateHeat(sideHeat);
+        public void updateTile() {
+            if (currentRecipeObj != null && currentRecipeObj.inputHeat > 0)
+                heat = calculateHeat(sideHeat);
 
             // 如果当前配方输出的单位被禁用，自动取消配方
-            if(currentRecipeObj != null && currentRecipeObj.outputPayloads != null){
+            if (currentRecipeObj != null && currentRecipeObj.outputPayloads != null) {
                 boolean banned = false;
-                for(PayloadStack stack : currentRecipeObj.outputPayloads){
-                    if(stack.item instanceof UnitType unit && unit.isBanned()){
+                for (PayloadStack stack : currentRecipeObj.outputPayloads) {
+                    if (stack.item instanceof UnitType unit && unit.isBanned()) {
                         banned = true;
                         break;
                     }
                 }
-                if(banned){
+                if (banned) {
                     switchRecipe(-1);
                 }
             }
 
-            if(efficiency > 0){
+            if (efficiency > 0) {
                 float buildMul = isUnitRecipe ? state.rules.unitBuildSpeed(team) : 1f;
                 progress += getProgressIncrease(craftTime) * buildMul;
                 warmup = Mathf.approachDelta(warmup, warmupTarget(), warmupSpeed);
                 totalProgress += warmup * delta();
 
-                if(currentRecipeObj != null && currentRecipeObj.outputLiquids != null){
+                if (currentRecipeObj != null && currentRecipeObj.outputLiquids != null) {
                     float inc = getProgressIncrease(1f);
-                    for(LiquidStack output : currentRecipeObj.outputLiquids){
+                    for (LiquidStack output : currentRecipeObj.outputLiquids) {
                         handleLiquid(this, output.liquid, Math.min(output.amount * inc, liquidCapacity - liquids.get(output.liquid)));
                     }
                 }
 
-                if(wasVisible && currentUpdateEffect != null && Mathf.chanceDelta(currentUpdateEffectChance)){
-                    currentUpdateEffect.at(x + Mathf.range(size * currentUpdateEffectSpread), y + Mathf.range(size * currentUpdateEffectSpread));
+                if (wasVisible && currentUpdateEffect != null && Mathf.chanceDelta(currentUpdateEffectChance)) {
+                    currentUpdateEffect.at(
+                            x + Mathf.range(size * currentUpdateEffectSpread),
+                            y + Mathf.range(size * currentUpdateEffectSpread));
                 }
-                if(currentRecipeObj != null && currentRecipeObj.updateSound != null && Mathf.chanceDelta(currentUpdateEffectChance)){
+                if (currentRecipeObj != null && currentRecipeObj.updateSound != null && Mathf.chanceDelta(currentUpdateEffectChance)) {
                     currentRecipeObj.updateSound.at(x, y);
                 }
-            }else{
+            } else {
                 warmup = Mathf.approachDelta(warmup, 0f, warmupSpeed);
             }
 
-            if(currentRecipeObj != null && currentRecipeObj.outputHeat > 0)
+            if (currentRecipeObj != null && currentRecipeObj.outputHeat > 0)
                 heatOutput = Mathf.approachDelta(heatOutput, currentRecipeObj.outputHeat * efficiency, warmupRate * delta());
-            else heatOutput = Mathf.approachDelta(heatOutput, 0, warmupRate * delta());
+            else
+                heatOutput = Mathf.approachDelta(heatOutput, 0, warmupRate * delta());
 
             moveOutPayload();
-            if(progress >= 1f) craft();
+            if (progress >= 1f) craft();
             dumpOutputs();
         }
 
-        public float warmupTarget(){
-            if(currentRecipeObj == null || currentRecipeObj.inputHeat <= 0) return 1f;
+        public float warmupTarget() {
+            if (currentRecipeObj == null || currentRecipeObj.inputHeat <= 0) return 1f;
             return Mathf.clamp(heat / currentRecipeObj.inputHeat);
         }
 
         // ============ 载荷输出 ============
 
-        public void moveOutPayload(){
-            if(outputPayloads.isEmpty()) return;
+        public void moveOutPayload() {
+            if (outputPayloads.isEmpty()) return;
 
             Payload p = outputPayloads.first();
+            //与 PayloadBlockBuild.updateTile() 一致: 死掉的载荷必须丢掉, 否则会永远堵在队首;
+            //配合默认的 outputPayloadQueueLimit = -1 会让工厂永久停产
+            if (p.isDead()) {
+                outputPayloads.remove(0);
+                payloadsChanged = true;
+                payVector.setZero();
+                return;
+            }
             p.update(null, this);
 
             Vec2 dest = Tmp.v1.trns(rotdeg(), size * tilesize / 2f);
@@ -986,26 +1073,26 @@ public class MultiCrafter extends Block{
             boolean canDump = front == null || !front.tile.solid();
             boolean canMove = front != null && (front.block.outputsPayload || front.block.acceptsPayload);
 
-            if(canDump && !canMove){
+            if (canDump && !canMove) {
                 PayloadBlock.pushOutput(p, 1f - (payVector.dst(dest) / (size * tilesize / 2f)));
             }
 
-            if(payVector.within(dest, 0.001f)){
+            if (payVector.within(dest, 0.001f)) {
                 payVector.clamp(-size * tilesize / 2f, -size * tilesize / 2f, size * tilesize / 2f, size * tilesize / 2f);
-                if(canMove){
-                    if(movePayload(p)){
+                if (canMove) {
+                    if (movePayload(p)) {
                         outputPayloads.remove(0);
                         payloadsChanged = true;
                         payVector.setZero();
                     }
-                }else if(canDump){
+                } else if (canDump) {
                     float tx = Angles.trnsx(p.rotation(), 0.1f);
                     float ty = Angles.trnsy(p.rotation(), 0.1f);
                     p.set(p.x() + tx, p.y() + ty, p.rotation());
-                    if(p.dump()){
+                    if (p.dump()) {
                         outputPayloads.remove(0);
                         payVector.setZero();
-                    }else{
+                    } else {
                         p.set(p.x() - tx, p.y() - ty, p.rotation());
                     }
                 }
@@ -1014,35 +1101,35 @@ public class MultiCrafter extends Block{
 
         // ============ 生产完成 ============
 
-        public void craft(){
-            if(currentRecipeObj == null) return;
+        public void craft() {
+            if (currentRecipeObj == null) return;
             consume();
 
-            if(currentRecipeObj.outputItems != null){
-                for(ItemStack output : currentRecipeObj.outputItems){
-                    for(int i = 0; i < output.amount; i++) offload(output.item);
+            if (currentRecipeObj.outputItems != null) {
+                for (ItemStack output : currentRecipeObj.outputItems) {
+                    for (int i = 0; i < output.amount; i++) offload(output.item);
                 }
             }
 
-            if(currentRecipeObj.outputPayloads != null){
-                for(PayloadStack stack : currentRecipeObj.outputPayloads){
-                    for(int i = 0; i < stack.amount; i++){
+            if (currentRecipeObj.outputPayloads != null) {
+                for (PayloadStack stack : currentRecipeObj.outputPayloads) {
+                    for (int i = 0; i < stack.amount; i++) {
                         Payload p = createPayload(stack.item);
-                        if(p != null){
+                        if (p != null) {
                             outputPayloads.add(p);
 
-                            if(p instanceof UnitPayload up){
+                            if (p instanceof UnitPayload up) {
                                 Unit unit = up.unit;
-                                if(unit.isCommandable()){
-                                    if(commandPos != null) unit.command().commandPosition(commandPos);
+                                if (unit.isCommandable()) {
+                                    if (commandPos != null) unit.command().commandPosition(commandPos);
                                     unit.command().command(command == null && unit.type.defaultCommand != null ? unit.type.defaultCommand : command);
                                 }
                             }
 
-                            if(p instanceof UnitPayload){
+                            if (p instanceof UnitPayload) {
                                 Events.fire(new UnitCreateEvent(((UnitPayload) p).unit, this));
                             }
-                            if(payVector.isZero()){
+                            if (payVector.isZero()) {
                                 payVector.setZero();
                                 payRotation = rotdeg();
                             }
@@ -1051,32 +1138,34 @@ public class MultiCrafter extends Block{
                 }
             }
 
-            if(currentCraftEffect != null && wasVisible) currentCraftEffect.at(x, y);
-            if(currentRecipeObj.craftSound != null && wasVisible) currentRecipeObj.craftSound.at(x, y);
+            if (currentCraftEffect != null && wasVisible) currentCraftEffect.at(x, y);
+            if (currentRecipeObj.craftSound != null && wasVisible) currentRecipeObj.craftSound.at(x, y);
             payloadsChanged = true;
             progress %= 1f;
         }
 
-        public Payload createPayload(UnlockableContent content){
-            if(content instanceof Block b) return new BuildPayload(b, team);
-            else if(content instanceof UnitType unitType) return new UnitPayload(unitType.create(team));
+        public Payload createPayload(UnlockableContent content) {
+            if (content instanceof Block b) return new BuildPayload(b, team);
+            else if (content instanceof UnitType unitType) return new UnitPayload(unitType.create(team));
+            Log.warn("MultiCrafter @: 载荷输出配置了无法创建的内容 @", block.name, content);
             return null;
         }
 
         // ============ 输出 ============
 
-        public void dumpOutputs(){
-            if(currentRecipeObj == null) return;
+        public void dumpOutputs() {
+            if (currentRecipeObj == null) return;
 
-            if(currentRecipeObj.outputItems != null && timer(timerDump, dumpTime / timeScale)){
-                for(ItemStack output : currentRecipeObj.outputItems){
+            if (currentRecipeObj.outputItems != null && timer(timerDump, dumpTime / timeScale)) {
+                for (ItemStack output : currentRecipeObj.outputItems) {
                     dump(output.item);
                 }
             }
 
-            if(currentRecipeObj.outputLiquids != null){
-                for(int i = 0; i < currentRecipeObj.outputLiquids.length; i++){
-                    int dir = currentRecipeObj.liquidOutputDirections.length > i ? currentRecipeObj.liquidOutputDirections[i] : -1;
+            if (currentRecipeObj.outputLiquids != null) {
+                for (int i = 0; i < currentRecipeObj.outputLiquids.length; i++) {
+                    int dir = currentRecipeObj.liquidOutputDirections.length > i
+                            ? currentRecipeObj.liquidOutputDirections[i] : -1;
                     dumpLiquid(currentRecipeObj.outputLiquids[i].liquid, 2f, dir);
                 }
             }
@@ -1084,51 +1173,54 @@ public class MultiCrafter extends Block{
 
         // ============ 配置界面 ============
 
-        private void buildRecipeButtonContent(Table btnTable, Recipe rec, int recipeNum){
+        private void buildRecipeButtonContent(Table btnTable, Recipe rec, int recipeNum) {
             btnTable.left().defaults().left();
-            btnTable.add(String.valueOf(recipeNum)).width(24f).right().padRight(8f).padLeft(8f).color(Color.lightGray);
+            btnTable.add(String.valueOf(recipeNum)).width(24f).right()
+                    .padRight(8f).padLeft(8f).color(Color.lightGray);
 
             btnTable.table(iconRow -> {
                 iconRow.left().defaults().left();
 
-                if(rec.inputItems != null) for(ItemStack s : rec.inputItems)
+                if (rec.inputItems != null) for (ItemStack s : rec.inputItems)
                     iconRow.image(s.item.uiIcon).size(24f).pad(2);
-                if(rec.inputLiquids != null) for(LiquidStack s : rec.inputLiquids)
+                if (rec.inputLiquids != null) for (LiquidStack s : rec.inputLiquids)
                     iconRow.image(s.liquid.uiIcon).size(24f).pad(2);
-                if(rec.inputPayloads != null) for(PayloadStack s : rec.inputPayloads)
+                if (rec.inputPayloads != null) for (PayloadStack s : rec.inputPayloads)
                     iconRow.image(s.item.uiIcon).size(24f).pad(2);
-                if(rec.inputPower > 0)
+                if (rec.inputPower > 0)
                     iconRow.add(StatUnit.powerSecond.icon).style(Styles.outlineLabel).fontScale(1.3f).pad(2);
-                if(rec.inputHeat > 0)
+                if (rec.inputHeat > 0)
                     iconRow.add(StatUnit.heatUnits.icon).style(Styles.outlineLabel).fontScale(1.3f).pad(2);
 
-                iconRow.image().size(24f).pad(6).update(i2 -> i2.setDrawable(new TextureRegionDrawable(Icon.right))).with(i2 -> i2.setScaling(Scaling.fit));
+                iconRow.image().size(24f).pad(6)
+                        .update(img -> img.setDrawable(new TextureRegionDrawable(Icon.right)))
+                        .with(img -> img.setScaling(Scaling.fit));
 
-                if(rec.outputItems != null) for(ItemStack s : rec.outputItems)
+                if (rec.outputItems != null) for (ItemStack s : rec.outputItems)
                     iconRow.image(s.item.uiIcon).size(24f).pad(2);
-                if(rec.outputLiquids != null) for(LiquidStack s : rec.outputLiquids)
+                if (rec.outputLiquids != null) for (LiquidStack s : rec.outputLiquids)
                     iconRow.image(s.liquid.uiIcon).size(24f).pad(2);
-                if(rec.outputPayloads != null) for(PayloadStack s : rec.outputPayloads)
+                if (rec.outputPayloads != null) for (PayloadStack s : rec.outputPayloads)
                     iconRow.image(s.item.uiIcon).size(24f).pad(2);
-                if(rec.outputPower > 0)
+                if (rec.outputPower > 0)
                     iconRow.add(StatUnit.powerSecond.icon).style(Styles.outlineLabel).fontScale(1.25f).pad(2);
-                if(rec.outputHeat > 0)
+                if (rec.outputHeat > 0)
                     iconRow.add(StatUnit.heatUnits.icon).style(Styles.outlineLabel).fontScale(1.25f).pad(2);
             });
         }
 
-        private boolean hasAvailableCommands(){
-            if(currentRecipeObj == null || currentRecipeObj.outputPayloads == null) return false;
-            for(PayloadStack stack : currentRecipeObj.outputPayloads){
-                if(stack.item instanceof UnitType ut && ut.commands.size > 0){
+        private boolean hasAvailableCommands() {
+            if (currentRecipeObj == null || currentRecipeObj.outputPayloads == null) return false;
+            for (PayloadStack stack : currentRecipeObj.outputPayloads) {
+                if (stack.item instanceof UnitType ut && ut.commands.size > 0) {
                     return true;
                 }
             }
             return false;
         }
 
-        private void buildCommandUI(Table parent){
-            if(!hasAvailableCommands()) return;
+        private void buildCommandUI(Table parent) {
+            if (!hasAvailableCommands()) return;
 
             parent.row();
             Table commands = new Table();
@@ -1137,7 +1229,7 @@ public class MultiCrafter extends Block{
             Runnable rebuildCommands = () -> {
                 commands.clear();
                 UnitType unitType = getCommandableUnitType();
-                if(unitType != null){
+                if (unitType != null) {
                     commands.background(Styles.black6);
                     ButtonGroup<ImageButton> group = new ButtonGroup<>();
                     group.setMinCheckCount(0);
@@ -1146,15 +1238,19 @@ public class MultiCrafter extends Block{
 
                     commands.image(Tex.whiteui, Pal.gray).height(4f).growX().colspan(cols).row();
 
-                    for(int i = 0; i < list.size; i++){
+                    for (int i = 0; i < list.size; i++) {
                         UnitCommand cmd = list.get(i);
-                        ImageButton button = commands.button(cmd.getIcon(), Styles.clearNoneTogglei, 40f, () -> {
-                            configure(cmd);
-                        }).tooltip(cmd.localized()).group(group).get();
+                        ImageButton button = commands.button(
+                                cmd.getIcon(),
+                                Styles.clearNoneTogglei,
+                                40f,
+                                () -> configure(cmd)
+                        ).tooltip(cmd.localized()).group(group).get();
 
-                        button.update(() -> button.setChecked(command == cmd || (command == null && unitType.defaultCommand == cmd)));
+                        button.update(() -> button.setChecked(
+                                command == cmd || (command == null && unitType.defaultCommand == cmd)));
 
-                        if(i % cols == cols - 1) commands.row();
+                        if (i % cols == cols - 1) commands.row();
                     }
                 }
             };
@@ -1163,7 +1259,7 @@ public class MultiCrafter extends Block{
         }
 
         @Override
-        public void buildConfiguration(Table table){
+        public void buildConfiguration(Table table) {
             showPayloadPanel();
 
             table.clearChildren();
@@ -1174,8 +1270,8 @@ public class MultiCrafter extends Block{
             Table content = new Table();
             content.top().left();
 
-            if(recipeButtonStyle == null){
-                recipeButtonStyle = new TextButton.TextButtonStyle(){{
+            if (recipeButtonStyle == null) {
+                recipeButtonStyle = new TextButton.TextButtonStyle() {{
                     up = Styles.none;
                     over = Styles.flatOver;
                     down = Styles.flatDown;
@@ -1187,21 +1283,21 @@ public class MultiCrafter extends Block{
             }
 
             // 构建所有配方按钮
-            for(int i = 0; i < recipes.length; i++){
+            for (int i = 0; i < recipes.length; i++) {
                 final int idx = i;
                 Recipe rec = recipes[i];
 
-                if(rec.outputPayloads != null){
+                if (rec.outputPayloads != null) {
                     boolean hidden = false;
-                    for(PayloadStack stack : rec.outputPayloads){
-                        if(stack.item instanceof UnitType unit){
-                            if(!unit.unlockedNow() || unit.isBanned()){
+                    for (PayloadStack stack : rec.outputPayloads) {
+                        if (stack.item instanceof UnitType unit) {
+                            if (!unit.unlockedNow() || unit.isBanned()) {
                                 hidden = true;
                                 break;
                             }
                         }
                     }
-                    if(hidden) continue;
+                    if (hidden) continue;
                 }
 
                 TextButton btn = new TextButton("");
@@ -1210,8 +1306,7 @@ public class MultiCrafter extends Block{
                 buildRecipeButtonContent(btn, rec, i + 1);
 
                 btn.clicked(() -> {
-                    if(currentRecipe == idx) switchRecipe(-1);
-                    else switchRecipe(idx);
+                    configure(currentRecipe == idx ? -1 : idx);
                     deselect();
                 });
                 btn.update(() -> btn.setChecked(currentRecipe == idx));
@@ -1225,7 +1320,7 @@ public class MultiCrafter extends Block{
             pane.setOverscroll(false, false);
             pane.setFlickScroll(false);
             pane.exited(() -> {
-                if(pane.hasScroll()){
+                if (pane.hasScroll()) {
                     Core.scene.setScrollFocus(null);
                 }
             });
@@ -1236,10 +1331,10 @@ public class MultiCrafter extends Block{
             buildCommandUI(table);
         }
 
-        private @Nullable UnitType getCommandableUnitType(){
-            if(currentRecipeObj == null || currentRecipeObj.outputPayloads == null) return null;
-            for(PayloadStack stack : currentRecipeObj.outputPayloads){
-                if(stack.item instanceof UnitType ut && ut.commands.size > 0){
+        private @Nullable UnitType getCommandableUnitType() {
+            if (currentRecipeObj == null || currentRecipeObj.outputPayloads == null) return null;
+            for (PayloadStack stack : currentRecipeObj.outputPayloads) {
+                if (stack.item instanceof UnitType ut && ut.commands.size > 0) {
                     return ut;
                 }
             }
@@ -1247,8 +1342,8 @@ public class MultiCrafter extends Block{
         }
 
         @Override
-        public boolean onConfigureBuildTapped(Building other){
-            if(this == other){
+        public boolean onConfigureBuildTapped(Building other) {
+            if (this == other) {
                 deselect();
                 return false;
             }
@@ -1257,9 +1352,9 @@ public class MultiCrafter extends Block{
 
         // ============ 配方切换 ============
 
-        private void switchRecipe(int idx){
-            if(idx < -1 || idx >= recipes.length) idx = -1;
-            if(currentRecipe == idx) return;
+        private void switchRecipe(int idx) {
+            if (idx < -1 || idx >= recipes.length) idx = -1;
+            if (currentRecipe == idx) return;
             currentRecipe = idx;
             progress = 0f;
             heatOutput = 0f;
@@ -1270,13 +1365,13 @@ public class MultiCrafter extends Block{
             updateProximity();
         }
 
-        private void refreshFromRecipe(){
+        private void refreshFromRecipe() {
             Recipe rec = (currentRecipe >= 0 && currentRecipe < recipes.length) ? recipes[currentRecipe] : null;
             currentRecipeObj = rec;
 
-            if(rec == null){
+            if (rec == null) {
                 craftTime = 80f;
-                canOverdrive = false;
+                overdriveAllowed = false;
                 warmupSpeed = 0.019f;
                 currentCraftEffect = craftEffect;
                 currentUpdateEffect = null;
@@ -1284,9 +1379,9 @@ public class MultiCrafter extends Block{
                 currentUpdateEffectSpread = 4f;
                 currentSwitchEffect = null;
                 isUnitRecipe = false;
-            }else{
+            } else {
                 craftTime = rec.craftTime;
-                canOverdrive = !(rec.outputHeat > 0) && rec.allowOverdrive;
+                overdriveAllowed = !(rec.outputHeat > 0) && rec.allowOverdrive;
                 warmupSpeed = rec.warmupSpeed;
                 currentCraftEffect = rec.craftEffect != null ? rec.craftEffect : craftEffect;
                 currentUpdateEffect = rec.updateEffect != null ? rec.updateEffect : updateEffect;
@@ -1295,12 +1390,9 @@ public class MultiCrafter extends Block{
                 currentSwitchEffect = rec.switchEffect != null ? rec.switchEffect : switchEffect;
 
                 boolean unit = false;
-                if(rec.outputPayloads != null){
-                    for(PayloadStack ps : rec.outputPayloads){
-                        if(ps.item instanceof UnitType){
-                            unit = true;
-                            break;
-                        }
+                if (rec.outputPayloads != null) {
+                    for (PayloadStack ps : rec.outputPayloads) {
+                        if (ps.item instanceof UnitType) { unit = true; break; }
                     }
                 }
                 isUnitRecipe = unit;
@@ -1310,71 +1402,78 @@ public class MultiCrafter extends Block{
             // 更新允许输入缓存
             acceptedItems.clear();
             acceptedLiquids.clear();
-            if(rec != null){
-                if(rec.inputItems != null){
-                    for(ItemStack stack : rec.inputItems){
+            if (rec != null) {
+                if (rec.inputItems != null) {
+                    for (ItemStack stack : rec.inputItems) {
                         acceptedItems.add(stack.item);
                     }
                 }
-                if(rec.inputLiquids != null){
-                    for(LiquidStack stack : rec.inputLiquids){
+                if (rec.inputLiquids != null) {
+                    for (LiquidStack stack : rec.inputLiquids) {
                         acceptedLiquids.add(stack.liquid);
                     }
                 }
             }
 
             // 配方切换时检查命令兼容性
-            if(command != null && currentRecipeObj != null && currentRecipeObj.outputPayloads != null){
+            if (command != null && currentRecipeObj != null && currentRecipeObj.outputPayloads != null) {
                 boolean supported = false;
-                for(PayloadStack stack : currentRecipeObj.outputPayloads){
-                    if(stack.item instanceof UnitType ut && ut.commands.contains(command)){
+                for (PayloadStack stack : currentRecipeObj.outputPayloads) {
+                    if (stack.item instanceof UnitType ut && ut.commands.contains(command)) {
                         supported = true;
                         break;
                     }
                 }
-                if(!supported) command = null;
+                if (!supported) command = null;
+            }
+
+            //切到不允许超速的配方时, 立刻清掉残留的增益增幅;
+            //只清 >1 的部分, 不干扰 <1 的减速 (applySlowdown 是另一条通道)
+            if (!overdriveAllowed && timeScale > 1f) {
+                timeScale = 1f;
+                timeScaleDuration = 0f;
             }
         }
 
-        public float getActualProgressPerSecond(){
-            if(currentRecipeObj == null) return 0f;
+        public float getActualProgressPerSecond() {
+            if (currentRecipeObj == null) return 0f;
             float inc = getProgressIncrease(craftTime);
-            if(isUnitRecipe) inc *= state.rules.unitBuildSpeed(team);
+            if (isUnitRecipe) inc *= state.rules.unitBuildSpeed(team);
             return inc / Time.delta * 60f;
         }
 
         // ============ 生产条件 ============
 
         @Override
-        public boolean shouldConsume(){
-            if(currentRecipeObj == null) return false;
-            if(currentRecipeObj.inputHeat > 0 && heat <= 0) return false;
+        public boolean shouldConsume() {
+            if (currentRecipeObj == null) return false;
+            if (currentRecipeObj.inputHeat > 0 && heat <= 0) return false;
 
-            if(currentRecipeObj.outputItems != null){
-                for(ItemStack s : currentRecipeObj.outputItems){
-                    if(items.get(s.item) + s.amount > itemCapacity) return false;
+            if (currentRecipeObj.outputItems != null) {
+                for (ItemStack s : currentRecipeObj.outputItems) {
+                    if (items.get(s.item) + s.amount > itemCapacity) return false;
                 }
             }
 
-            if(currentRecipeObj.outputLiquids != null && !ignoreLiquidFullness){
+            if (currentRecipeObj.outputLiquids != null && !ignoreLiquidFullness) {
                 boolean allFull = true;
-                for(LiquidStack s : currentRecipeObj.outputLiquids){
-                    if(liquids.get(s.liquid) >= liquidCapacity - 0.001f){
-                        if(!dumpExtraLiquid) return false;
-                    }else allFull = false;
+                for (LiquidStack s : currentRecipeObj.outputLiquids) {
+                    if (liquids.get(s.liquid) >= liquidCapacity - 0.001f) {
+                        if (!dumpExtraLiquid) return false;
+                    } else allFull = false;
                 }
-                if(allFull) return false;
+                if (allFull) return false;
             }
 
-            if(currentRecipeObj.outputPayloads != null){
+            if (currentRecipeObj.outputPayloads != null) {
                 int limit = currentRecipeObj.outputPayloadQueueLimit;
-                if(limit == -1){
-                    if(!outputPayloads.isEmpty()) return false;
-                }else if(limit > 0){
+                if (limit == -1) {
+                    if (!outputPayloads.isEmpty()) return false;
+                } else if (limit > 0) {
                     int toProduce = 0;
-                    for(PayloadStack stack : currentRecipeObj.outputPayloads) toProduce += stack.amount;
-                    if(outputPayloads.size + toProduce > limit) return false;
-                }else{
+                    for (PayloadStack stack : currentRecipeObj.outputPayloads) toProduce += stack.amount;
+                    if (outputPayloads.size + toProduce > limit) return false;
+                } else {
                     return false;
                 }
             }
@@ -1385,7 +1484,7 @@ public class MultiCrafter extends Block{
         // ============ 序列化 ============
 
         @Override
-        public void write(Writes w){
+        public void write(Writes w) {
             super.write(w);
             w.i(currentRecipe);
             inputPayloads.write(w);
@@ -1393,7 +1492,7 @@ public class MultiCrafter extends Block{
             w.f(payVector.y);
             w.f(payRotation);
             w.i(outputPayloads.size);
-            for(Payload p : outputPayloads) Payload.write(p, w);
+            for (Payload p : outputPayloads) Payload.write(p, w);
             w.f(heatOutput);
             w.f(heat);
             w.f(progress);
@@ -1403,18 +1502,18 @@ public class MultiCrafter extends Block{
         }
 
         @Override
-        public void read(Reads r, byte revision){
+        public void read(Reads r, byte revision) {
             super.read(r, revision);
             currentRecipe = r.i();
-            if(currentRecipe >= recipes.length || currentRecipe < -1) currentRecipe = -1;
+            if (currentRecipe >= recipes.length || currentRecipe < -1) currentRecipe = -1;
             inputPayloads.read(r);
             payVector.set(r.f(), r.f());
             payRotation = r.f();
             outputPayloads.clear();
             int size = r.i();
-            for(int i = 0; i < size; i++){
+            for (int i = 0; i < size; i++) {
                 Payload p = Payload.read(r);
-                if(p != null) outputPayloads.add(p);
+                if (p != null) outputPayloads.add(p);
             }
             heatOutput = r.f();
             heat = r.f();
@@ -1428,89 +1527,71 @@ public class MultiCrafter extends Block{
         // ============ 效率与热量接口 ============
 
         @Override
-        public float efficiencyScale(){
-            if(currentRecipeObj == null || currentRecipeObj.inputHeat <= 0) return 1f;
+        public float efficiencyScale() {
+            if (currentRecipeObj == null || currentRecipeObj.inputHeat <= 0) return 1f;
             float over = Math.max(heat - currentRecipeObj.inputHeat, 0f);
             return Math.min(Mathf.clamp(heat / currentRecipeObj.inputHeat) + over / currentRecipeObj.inputHeat * overheatScale, maxEfficiency);
         }
 
-        public float heat(){
-            return heatOutput;
-        }
-
-        public float heatFrac(){
-            return (currentRecipeObj != null && currentRecipeObj.outputHeat > 0) ? heatOutput / currentRecipeObj.outputHeat : 0f;
-        }
-
         @Override
-        public float[] sideHeat(){
-            return sideHeat;
-        }
-
+        public float heat() { return heatOutput; }
         @Override
-        public float heatRequirement(){
-            return currentRecipeObj != null ? currentRecipeObj.inputHeat : 0f;
-        }
+        public float heatFrac() { return (currentRecipeObj != null && currentRecipeObj.outputHeat > 0) ? heatOutput / currentRecipeObj.outputHeat : 0f; }
+        @Override
+        public float[] sideHeat() { return sideHeat; }
+        @Override
+        public float heatRequirement() { return currentRecipeObj != null ? currentRecipeObj.inputHeat : 0f; }
 
         // ============ 重写方法 ============
 
+        /**
+         * 当前配方不允许超速时直接拒绝外部增幅, 让 timeScale 全程保持 1:
+         * 这样 delta()/edelta() 都是原速, 耗电、产出、液体输出、dump 节流全部自然正确,
+         * 不需要在别的地方再判断. 也不影响 applySlowdown() 那条独立的减速通道.
+         */
         @Override
-        public void update(){
-            if((timeScaleDuration -= Time.delta) <= 0f || !canOverdrive) timeScale = 1f;
-            if(!headless && block.ambientSound != Sounds.none && shouldAmbientSound()){
-                control.sound.loop(block.ambientSound, this, block.ambientSoundVolume * ambientVolume());
+        public void applyBoost(float intensity, float duration) {
+            if (overdriveAllowed) {
+                super.applyBoost(intensity, duration);
             }
-            updateConsumption();
-            if(enabled || !block.noUpdateDisabled) updateTile();
         }
 
         @Override
-        public Object config(){return currentRecipe;}
+        public Object config() { return currentRecipe; }
 
         @Override
-        public void placed(){
+        public void placed() {
             super.placed();
             refreshFromRecipe();
         }
 
         @Override
-        public boolean acceptItem(Building source, Item item){
-            if(currentRecipeObj == null) return false;
+        public boolean acceptItem(Building source, Item item) {
+            if (currentRecipeObj == null) return false;
             return acceptedItems.contains(item) && items.get(item) < itemCapacity;
         }
 
         @Override
-        public boolean acceptLiquid(Building source, Liquid liquid){
-            if(currentRecipeObj == null) return false;
+        public boolean acceptLiquid(Building source, Liquid liquid) {
+            if (currentRecipeObj == null) return false;
             return acceptedLiquids.contains(liquid) && liquids.get(liquid) < liquidCapacity;
         }
 
         @Override
-        public float warmup(){
-            return warmup;
-        }
+        public float warmup() { return warmup; }
+        @Override
+        public float totalProgress() { return totalProgress; }
+        @Override
+        public float getPowerProduction() { return (currentRecipeObj != null && currentRecipeObj.outputPower > 0) ? currentRecipeObj.outputPower * efficiency : 0f; }
+        @Override
+        public float progress() { return Mathf.clamp(progress); }
 
         @Override
-        public float totalProgress(){
-            return totalProgress;
-        }
-
-        @Override
-        public float getPowerProduction(){
-            return (currentRecipeObj != null && currentRecipeObj.outputPower > 0) ? currentRecipeObj.outputPower * efficiency : 0f;
-        }
-
-        @Override
-        public float progress(){
-            return Mathf.clamp(progress);
-        }
-
-        @Override
-        public float getProgressIncrease(float baseTime){
+        public float getProgressIncrease(float baseTime) {
             float scale = 1f;
-            if(currentRecipeObj != null && currentRecipeObj.outputLiquids != null && !ignoreLiquidFullness){
+            if (currentRecipeObj != null && currentRecipeObj.outputLiquids != null && !ignoreLiquidFullness) {
                 float scaling = 1f, max = 0f;
-                for(var s : currentRecipeObj.outputLiquids){
+                for (var s : currentRecipeObj.outputLiquids) {
                     float value = (liquidCapacity - liquids.get(s.liquid)) / (s.amount * edelta());
                     scaling = Math.min(scaling, value);
                     max = Math.max(max, value);
@@ -1521,78 +1602,96 @@ public class MultiCrafter extends Block{
         }
 
         @Override
-        public void onProximityUpdate(){
+        public void onProximityUpdate() {
             super.onProximityUpdate();
-            if(attribute != null) attrsum = sumAttribute(attribute, tile.x, tile.y);
+            if (attribute != null) attrsum = sumAttribute(attribute, tile.x, tile.y);
+            //重新回到世界里就不再是被搬运状态 (原版靠 drawTeamTop() 清, 但本类重写了 draw() 不会调到它)
+            carried = false;
         }
 
-        public float efficiencyMultiplier(){
-            if(attribute == null) return 1f;
+        public float efficiencyMultiplier() {
+            if (attribute == null) return 1f;
             return baseEfficiency + Math.min(maxBoost, boostScale * attrsum) + attribute.env();
         }
 
         @Override
-        public void pickedUp(){
+        public void pickedUp() {
             attrsum = 0f;
             warmup = 0f;
+            //被载荷单位整体搬走, 此时 onRemoved() 不能把内部载荷吐出来 (与 PayloadBlockBuild 一致)
+            carried = true;
+        }
+
+        /** 被载荷放下时由 BuildPayload.place() 调用, 此时重新回到世界 */
+        @Override
+        public void dropped() {
+            super.dropped();
+            carried = false;
         }
 
         // ============ 载荷输入接口 ============
 
         @Override
-        public boolean acceptPayload(Building source, Payload payload){
-            if(currentRecipeObj == null || currentRecipeObj.inputPayloads == null) return false;
+        public boolean acceptPayload(Building source, Payload payload) {
+            if (currentRecipeObj == null || currentRecipeObj.inputPayloads == null) return false;
             var content = payload.content();
-            for(var stack : currentRecipeObj.inputPayloads){
-                if(stack.item == content){
-                    if(currentRecipeObj.inputPayloadCapacity != 0)
+            for (var stack : currentRecipeObj.inputPayloads) {
+                if (stack.item == content) {
+                    if (currentRecipeObj.inputPayloadCapacity != 0)
                         return inputPayloads.get(content) < currentRecipeObj.inputPayloadCapacity;
-                    else return inputPayloads.get(content) < stack.amount * currentRecipeObj.inputPayloadMultiplier;
+                    else
+                        return inputPayloads.get(content) < stack.amount * currentRecipeObj.inputPayloadMultiplier;
                 }
             }
             return false;
         }
 
         @Override
-        public void handlePayload(Building source, Payload payload){
+        public void handlePayload(Building source, Payload payload) {
             var content = payload.content();
             Fx.payloadDeposit.at(x, y);
+            //注意: 这里不能调 unit.remove(). 单位被拾起时 BuildingComp.handleUnitPayload()
+            //已经 remove() 过一次(单位计数 -1), 抛出时 UnitPayload.dump() 又会 add() 回去(+1);
+            //再 remove() 一次会把队伍单位计数多减一次, 影响单位上限判定和显示
             inputPayloads.add(content, 1);
-            if(payload instanceof UnitPayload up) up.unit.remove();
             payloadsChanged = true;
         }
 
         @Override
-        public Payload getPayload(){return outputPayloads.isEmpty() ? null : outputPayloads.first();}
-
+        public Payload getPayload() { return outputPayloads.isEmpty() ? null : outputPayloads.first(); }
         @Override
-        public Payload takePayload(){return outputPayloads.isEmpty() ? null : outputPayloads.remove(0);}
-
+        public Payload takePayload() {
+            if (outputPayloads.isEmpty()) return null;
+            Payload p = outputPayloads.remove(0);
+            payloadsChanged = true;
+            return p;
+        }
         @Override
-        public PayloadSeq getPayloads(){return inputPayloads;}
+        public PayloadSeq getPayloads() { return inputPayloads; }
 
         // ============ 逻辑控制 ============
 
         @Override
-        public Object senseObject(LAccess sensor){
-            if(sensor == LAccess.config) return currentRecipe;
+        public Object senseObject(LAccess sensor) {
+            if (sensor == LAccess.config) return currentRecipe;
             return super.senseObject(sensor);
         }
 
         @Override
-        public double sense(LAccess sensor){
-            if(sensor == LAccess.progress) return progress();
-            if(sensor == LAccess.totalLiquids && currentRecipeObj != null && currentRecipeObj.outputLiquids != null && currentRecipeObj.outputLiquids.length > 0){
+        public double sense(LAccess sensor) {
+            if (sensor == LAccess.progress) return progress();
+            if (sensor == LAccess.totalLiquids && currentRecipeObj != null
+                    && currentRecipeObj.outputLiquids != null && currentRecipeObj.outputLiquids.length > 0) {
                 return liquids.get(currentRecipeObj.outputLiquids[0].liquid);
             }
             return super.sense(sensor);
         }
 
         @Override
-        public void control(LAccess type, double p1, double p2, double p3, double p4){
-            if(type == LAccess.config){
+        public void control(LAccess type, double p1, double p2, double p3, double p4) {
+            if (type == LAccess.config) {
                 int idx = (int) p1;
-                if(idx >= -1 && idx < recipes.length) switchRecipe(idx);
+                if (idx >= -1 && idx < recipes.length) switchRecipe(idx);
                 return;
             }
             super.control(type, p1, p2, p3, p4);
@@ -1601,32 +1700,33 @@ public class MultiCrafter extends Block{
         // ============ 渲染 ============
 
         @Override
-        public void draw(){
+        public void draw() {
             drawer.draw(this);
 
-            if(currentRecipeObj != null && currentRecipeObj.outputPayloads != null){
-                for(PayloadStack stack : currentRecipeObj.outputPayloads){
-                    if(stack.item instanceof UnitType unitType){
-                        Draw.draw(Layer.blockOver, () -> Drawf.construct(this, unitType, rotdeg() - 90f, progress, 1f, totalProgress));
+            if (currentRecipeObj != null && currentRecipeObj.outputPayloads != null) {
+                for (PayloadStack stack : currentRecipeObj.outputPayloads) {
+                    if (stack.item instanceof UnitType unitType) {
+                        Draw.draw(Layer.blockOver, () ->
+                                Drawf.construct(this, unitType, rotdeg() - 90f, progress, 1f, totalProgress));
                         break;
                     }
                 }
             }
 
-            if(!outputPayloads.isEmpty()){
+            if (!outputPayloads.isEmpty()) {
                 Draw.z(Layer.blockOver);
                 outputPayloads.first().draw();
             }
         }
 
         @Override
-        public void drawLight(){
+        public void drawLight() {
             super.drawLight();
             drawer.drawLight(this);
         }
 
         @Override
-        public boolean shouldAmbientSound(){
+        public boolean shouldAmbientSound() {
             return efficiency > 0;
         }
 
@@ -1668,8 +1768,8 @@ public class MultiCrafter extends Block{
         private final Seq<UnlockableContent> displayedTypes = new Seq<>();
         private final ObjectFloatMap<UnlockableContent> shrinkHoldTimes = new ObjectFloatMap<>();
 
-        private void showPayloadPanel(){
-            if(payloadPanel != null && payloadPanel.getScene() != null) return;
+        private void showPayloadPanel() {
+            if (payloadPanel != null && payloadPanel.getScene() != null) return;
 
             payloadPanel = new Table(Tex.inventory);
             payloadPanel.touchable = Touchable.disabled;
@@ -1677,7 +1777,7 @@ public class MultiCrafter extends Block{
             payloadPanel.margin(4f);
 
             rebuildPayloadPanel(true);
-            if(payloadPanel == null) return;
+            if (payloadPanel == null) return;
 
             payloadPanel.setScale(0f, 1f);
             payloadPanel.actions(Actions.scaleTo(1f, 1f, 0.07f, Interp.pow3Out));
@@ -1689,50 +1789,50 @@ public class MultiCrafter extends Block{
             shrinkHoldTimes.clear();
 
             payloadPanel.update(() -> {
-                if(!isValid() || state.isMenu() || control.input.config.getSelected() != this){
+                if (!isValid() || state.isMenu() || control.input.config.getSelected() != this) {
                     hidePayloadPanel();
                     return;
                 }
 
                 // 仅在载荷变化时更新
-                if(payloadsChanged){
+                if (payloadsChanged) {
                     payloadsChanged = false;
 
                     ObjectMap<UnlockableContent, Integer> current = collectAllPayloads();
                     boolean empty = current.isEmpty();
 
-                    if(empty){
+                    if (empty) {
                         payloadEmptyTime += Time.delta;
-                        if(payloadEmptyTime >= 120f){
+                        if (payloadEmptyTime >= 120f) {
                             hidePayloadPanel();
                             return;
                         }
-                    }else{
+                    } else {
                         payloadEmptyTime = 0f;
 
                         boolean needRebuild = false;
 
-                        for(var entry : current.entries()){
-                            if(!displayedTypes.contains(entry.key)){
+                        for (var entry : current.entries()) {
+                            if (!displayedTypes.contains(entry.key)) {
                                 needRebuild = true;
                                 break;
                             }
                         }
 
-                        for(int i = displayedTypes.size - 1; i >= 0; i--){
+                        for (int i = displayedTypes.size - 1; i >= 0; i--) {
                             UnlockableContent type = displayedTypes.get(i);
-                            if(current.containsKey(type)){
+                            if (current.containsKey(type)) {
                                 shrinkHoldTimes.put(type, 0f);
-                            }else{
+                            } else {
                                 float time = shrinkHoldTimes.get(type, 0f) + Time.delta;
                                 shrinkHoldTimes.put(type, time);
-                                if(time >= 120f){
+                                if (time >= 120f) {
                                     needRebuild = true;
                                 }
                             }
                         }
 
-                        if(needRebuild){
+                        if (needRebuild) {
                             rebuildPayloadPanel(false);
                         }
                     }
@@ -1743,25 +1843,25 @@ public class MultiCrafter extends Block{
             payloadsChanged = true;
         }
 
-        private void rebuildPayloadPanel(boolean initial){
-            if(payloadPanel == null) return;
+        private void rebuildPayloadPanel(boolean initial) {
+            if (payloadPanel == null) return;
 
             ObjectMap<UnlockableContent, Integer> current = collectAllPayloads();
 
             displayedTypes.clear();
-            for(var entry : current.entries()){
+            for (var entry : current.entries()) {
                 displayedTypes.add(entry.key);
             }
-            for(UnlockableContent type : shrinkHoldTimes.keys()){
-                if(!displayedTypes.contains(type) && shrinkHoldTimes.get(type, 0f) < 120f){
+            for (UnlockableContent type : shrinkHoldTimes.keys()) {
+                if (!displayedTypes.contains(type) && shrinkHoldTimes.get(type, 0f) < 120f) {
                     displayedTypes.add(type);
                 }
             }
 
-            if(displayedTypes.isEmpty()){
+            if (displayedTypes.isEmpty()) {
                 payloadPanel.clearChildren();
                 payloadEmptyTime = 0f;
-                if(initial){
+                if (initial) {
                     payloadPanel.remove();
                     payloadPanel = null;
                 }
@@ -1770,39 +1870,41 @@ public class MultiCrafter extends Block{
 
             payloadPanel.clearChildren();
             int cols = 3, index = 0;
-            for(UnlockableContent c : displayedTypes){
+            for (UnlockableContent c : displayedTypes) {
                 Stack stack = new Stack();
                 stack.add(new Image(c.uiIcon).setScaling(Scaling.fit));
-                stack.add(new Table(t -> t.left().bottom().label(() -> UI.formatAmount(getPayloadCount(c))).style(Styles.outlineLabel)));
+                stack.add(new Table(t -> t.left().bottom()
+                        .label(() -> UI.formatAmount(getPayloadCount(c)))
+                        .style(Styles.outlineLabel)));
                 payloadPanel.add(stack).size(40f).pad(4f);
-                if(++index % cols == 0) payloadPanel.row();
+                if (++index % cols == 0) payloadPanel.row();
             }
         }
 
-        private int getPayloadCount(UnlockableContent content){
+        private int getPayloadCount(UnlockableContent content) {
             int count = inputPayloads.get(content);
-            for(Payload p : outputPayloads){
-                if(p instanceof UnitPayload up && up.unit.type == content) count++;
-                else if(p instanceof BuildPayload bp && bp.block() == content) count++;
+            for (Payload p : outputPayloads) {
+                if (p instanceof UnitPayload up && up.unit.type == content) count++;
+                else if (p instanceof BuildPayload bp && bp.block() == content) count++;
             }
             return count;
         }
 
-        private ObjectMap<UnlockableContent, Integer> collectAllPayloads(){
+        private ObjectMap<UnlockableContent, Integer> collectAllPayloads() {
             ObjectMap<UnlockableContent, Integer> map = new ObjectMap<>();
-            for(UnlockableContent type : allPayloadTypes){
+            for (UnlockableContent type : allPayloadTypes) {
                 int count = inputPayloads.get(type);
-                if(count > 0) map.put(type, count);
+                if (count > 0) map.put(type, count);
             }
-            for(Payload p : outputPayloads){
-                if(p instanceof UnitPayload up){
+            for (Payload p : outputPayloads) {
+                if (p instanceof UnitPayload up) {
                     UnitType unitType = up.unit.type;
-                    if(allPayloadTypes.contains(unitType)){
+                    if (allPayloadTypes.contains(unitType)) {
                         map.put(unitType, map.get(unitType, 0) + 1);
                     }
-                }else if(p instanceof BuildPayload bp){
+                } else if (p instanceof BuildPayload bp) {
                     Block block = bp.block();
-                    if(allPayloadTypes.contains(block)){
+                    if (allPayloadTypes.contains(block)) {
                         map.put(block, map.get(block, 0) + 1);
                     }
                 }
@@ -1810,9 +1912,9 @@ public class MultiCrafter extends Block{
             return map;
         }
 
-        private void positionPayloadPanel(){
-            if(payloadPanel == null) return;
-            if(payloadPanel.parent != ui.hudGroup){
+        private void positionPayloadPanel() {
+            if (payloadPanel == null) return;
+            if (payloadPanel.parent != ui.hudGroup) {
                 payloadPanel.remove();
                 ui.hudGroup.addChild(payloadPanel);
             }
@@ -1822,32 +1924,52 @@ public class MultiCrafter extends Block{
             payloadPanel.setPosition(v.x, v.y + offsetY, Align.topLeft);
         }
 
-        private void hidePayloadPanel(){
-            if(payloadPanel == null) return;
+        private void hidePayloadPanel() {
+            if (payloadPanel == null) return;
             Table panel = payloadPanel;
             payloadPanel = null;
             displayedTypes.clear();
             shrinkHoldTimes.clear();
-            panel.actions(Actions.sequence(Actions.scaleTo(0f, 1f, 0.06f, Interp.pow3Out), Actions.run(panel::remove)));
+            panel.actions(Actions.sequence(
+                    Actions.scaleTo(0f, 1f, 0.06f, Interp.pow3Out),
+                    Actions.run(panel::remove)
+            ));
         }
 
         @Override
-        public void onRemoved(){
+        public void onRemoved() {
             super.onRemoved();
-            if(payloadPanel != null){
+            if (payloadPanel != null) {
                 payloadPanel.clearActions();
                 payloadPanel.remove();
                 payloadPanel = null;
             }
+
+            //与 PayloadBlockBuild.onRemoved() 一致: 拆除时把还没送出去的载荷吐回世界;
+            //被载荷整体搬走(carried)时保留内容物; dump 不下来的(比如单位堆叠)直接销毁
+            if (!carried && !outputPayloads.isEmpty()) {
+                for (Payload p : outputPayloads) {
+                    if (!p.dump()) p.destroyed();
+                }
+                outputPayloads.clear();
+            }
         }
 
         @Override
-        public Vec2 getCommandPosition(){
+        public void onDestroyed() {
+            //与 PayloadBlockBuild.onDestroyed() 一致
+            for (Payload p : outputPayloads) p.destroyed();
+            outputPayloads.clear();
+            super.onDestroyed();
+        }
+
+        @Override
+        public Vec2 getCommandPosition() {
             return commandPos;
         }
 
         @Override
-        public void onCommand(Vec2 target){
+        public void onCommand(Vec2 target) {
             commandPos = target;
         }
     }
@@ -1856,14 +1978,14 @@ public class MultiCrafter extends Block{
 
     //region 动态电力消费者
 
-    public static class DynamicConsumePower extends ConsumePower{
-        public DynamicConsumePower(float usage){
+    public static class DynamicConsumePower extends ConsumePower {
+        public DynamicConsumePower(float usage) {
             super(usage, 0f, false);
         }
 
         @Override
-        public float requestedPower(Building entity){
-            if(entity instanceof MultiCrafterBuild build){
+        public float requestedPower(Building entity) {
+            if (entity instanceof MultiCrafterBuild build) {
                 Recipe r = build.getCurrentRecipe();
                 return (r != null && r.inputPower > 0 && entity.shouldConsume()) ? r.inputPower : 0f;
             }
@@ -1871,10 +1993,10 @@ public class MultiCrafter extends Block{
         }
 
         @Override
-        public float efficiency(Building entity){
-            if(entity instanceof MultiCrafterBuild build){
+        public float efficiency(Building entity) {
+            if (entity instanceof MultiCrafterBuild build) {
                 Recipe r = build.getCurrentRecipe();
-                if(r == null || r.inputPower <= 0) return 1f;
+                if (r == null || r.inputPower <= 0) return 1f;
             }
             return entity.power.status;
         }

@@ -1,4 +1,4 @@
-package momijiadd.type;
+package momijiadd.type.blocks.distribution;
 
 import arc.util.Strings;
 import arc.util.Time;
@@ -22,9 +22,9 @@ import static mindustry.Vars.content;
  * 物品传输逻辑等价于 {@link Junction}, 液体传输逻辑等价于 {@link LiquidJunction}.
  *
  * @author momiji142857
- * @since 2026-05-27
  * @see Junction
  * @see LiquidJunction
+ * @since 2026-05-27
  */
 public class ItemLiquidJunction extends LiquidJunction{
     public float speed = 26;
@@ -82,7 +82,7 @@ public class ItemLiquidJunction extends LiquidJunction{
 
                         dest.handleItem(this, item);
                         System.arraycopy(buffer.buffers[i], 1, buffer.buffers[i], 0, buffer.indexes[i] - 1);
-                        buffer.indexes[i] --;
+                        buffer.indexes[i]--;
                     }
                 }
             }

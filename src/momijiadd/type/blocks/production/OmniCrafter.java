@@ -1,4 +1,4 @@
-package momijiadd.type;
+package momijiadd.type.blocks.production;
 
 import arc.Core;
 import arc.func.Func;
@@ -262,17 +262,17 @@ public class OmniCrafter extends GenericCrafter{
             removeBar("liquid");
             boolean added = false;
 
-            for(var consl : consumers){
+            for(var cons : consumers){
                 /* 这里与原版行为略有不同
                  * 如果 consumers 中存在含有相同的液体的 ConsumeLiquid, 且该种液体的第一个和最后一个之间含有其他液体
                  * 液体条的顺序会与原版逻辑下的顺序不同
                  * 原版会出现在第一次的位置, 这里的会出现在最后一次的位置
                  * */
-                if(consl instanceof ConsumeLiquid liq){
+                if(cons instanceof ConsumeLiquid liq){
                     added = true;
                     removeBar("liquid-" + liq.liquid.name);
                     addLiquidBar(liq.liquid);
-                }else if(consl instanceof ConsumeLiquids multi){
+                }else if(cons instanceof ConsumeLiquids multi){
                     added = true;
                     for(var stack : multi.liquids){
                         removeBar("liquid-" + stack.liquid.name);

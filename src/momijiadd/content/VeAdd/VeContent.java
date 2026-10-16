@@ -4,7 +4,10 @@ import arc.util.Log;
 import mindustry.Vars;
 import mindustry.ctype.ContentType;
 import mindustry.ctype.MappableContent;
-import mindustry.type.*;
+import mindustry.type.Item;
+import mindustry.type.Liquid;
+import mindustry.type.Planet;
+import mindustry.type.UnitType;
 import mindustry.world.Block;
 
 /**

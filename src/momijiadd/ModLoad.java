@@ -9,22 +9,22 @@ import mindustry.mod.Mod;
 import mindustry.mod.Mods;
 import momijiadd.content.AddBlocks;
 import momijiadd.content.AddTechTree;
+import momijiadd.content.Test.TestFusionFuel;
 import momijiadd.content.VeAdd.VeAddBlocks;
 import momijiadd.content.VeAdd.VeAddTechTree;
 import momijiadd.content.VeAdd.VeContent;
-import momijiadd.content.Test.TestFusionFuel;
 
 public class ModLoad extends Mod{
 
     //是否启用基于氘和氚的聚变燃料合成路线.
     public boolean test_fusionFuel = false;
 
-    public ModLoad(){
-        Log.info("Loaded VE Addon: MomijiAdd constructor.");
+    public static String addModName(String add){
+        return Vars.mods.getMod(ModLoad.class).name + "-" + add;
     }
 
-    public static String addModName(String add){
-        return "ve-addon-momiji" + "-" + add;
+    public ModLoad(){
+        Log.info("Loaded VE Addon: MomijiAdd constructor.");
     }
 
     @Override

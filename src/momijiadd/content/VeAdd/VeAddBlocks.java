@@ -5,7 +5,10 @@ import mindustry.content.*;
 import mindustry.ctype.UnlockableContent;
 import mindustry.entities.effect.ParticleEffect;
 import mindustry.gen.Sounds;
-import mindustry.type.*;
+import mindustry.type.Category;
+import mindustry.type.ItemStack;
+import mindustry.type.LiquidStack;
+import mindustry.type.Planet;
 import mindustry.world.Block;
 import mindustry.world.blocks.heat.HeatProducer;
 import mindustry.world.blocks.production.Drill;
@@ -15,12 +18,10 @@ import mindustry.world.blocks.units.UnitCargoLoader;
 import mindustry.world.draw.*;
 import mindustry.world.meta.Attribute;
 import mindustry.world.meta.BlockGroup;
-import momijiadd.type.BatchDumpBridge;
-import momijiadd.type.ItemLiquidJunction;
-import momijiadd.type.LinkedDrill;
-import momijiadd.type.OmniCrafter;
-
-import static mindustry.type.ItemStack.with;
+import momijiadd.type.blocks.distribution.BatchDumpBridge;
+import momijiadd.type.blocks.distribution.ItemLiquidJunction;
+import momijiadd.type.blocks.production.LinkedDrill;
+import momijiadd.type.blocks.production.OmniCrafter;
 
 /**
  * 掌管与 Vanilla Expansion 模组联动的方块.
@@ -275,7 +276,7 @@ public class VeAddBlocks{
         }};
 
         fusionHeater = new HeatProducer("fusion-heater"){{
-            requirements(Category.crafting, with(Items.lead, 250, Items.graphite, 200, Items.silicon, 300, Items.surgeAlloy, 500, VeContent.quartz, 70, VeContent.silicide, 180, VeContent.chromium, 100, VeContent.fibralt, 150));
+            requirements(Category.crafting, ItemStack.with(Items.lead, 250, Items.graphite, 200, Items.silicon, 300, Items.surgeAlloy, 500, VeContent.quartz, 70, VeContent.silicide, 180, VeContent.chromium, 100, VeContent.fibralt, 150));
             size = 4;
             warmupRate = 0.1f;
 

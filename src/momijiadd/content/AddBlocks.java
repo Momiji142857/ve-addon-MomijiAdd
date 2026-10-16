@@ -1,14 +1,14 @@
 package momijiadd.content;
 
-import mindustry.content.*;
+import mindustry.content.Blocks;
+import mindustry.content.Items;
+import mindustry.content.UnitTypes;
 import mindustry.type.Category;
 import mindustry.type.ItemStack;
 import mindustry.world.Block;
 import mindustry.world.blocks.storage.CoreBlock;
 import mindustry.world.meta.BuildVisibility;
-import momijiadd.type.ItemLiquidJunction;
-
-import static mindustry.type.ItemStack.with;
+import momijiadd.type.blocks.distribution.ItemLiquidJunction;
 
 /**
  * 模组本身的非联动方块.
@@ -40,7 +40,7 @@ public class AddBlocks{
         //region sandbox
 
         pogCore = new CoreBlock("pog-core"){{
-            requirements(Category.effect, BuildVisibility.sandboxOnly, with());
+            requirements(Category.effect, BuildVisibility.sandboxOnly, ItemStack.with());
             health = Integer.MAX_VALUE;
             armor = Integer.MAX_VALUE;
             size = 3;

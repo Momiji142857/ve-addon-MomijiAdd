@@ -7,8 +7,8 @@ import mindustry.type.*;
 import mindustry.world.Block;
 import mindustry.world.blocks.production.GenericCrafter;
 import mindustry.world.draw.*;
-import momijiadd.MultiCrafter;
 import momijiadd.content.VeAdd.VeContent;
+import momijiadd.type.blocks.production.MultiCrafter;
 
 import static momijiadd.ModLoad.addModName;
 

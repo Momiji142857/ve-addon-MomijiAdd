@@ -1,4 +1,4 @@
-package momijiadd.type;
+package momijiadd.type.blocks.distribution;
 
 import arc.util.Log;
 import mindustry.gen.Building;
@@ -27,7 +27,7 @@ public class BatchDumpBridge extends ItemBridge{
     /** 每秒调用 dump(Item) 的最大次数. 默认 60. */
     public int dumpPerSecond = 60;
     /** 统计显示 (物品/秒). 目前没有实际作用 */
-    public float displayedSpeed = -1;
+    public float displayedSpeed = -1f;
 
     public BatchDumpBridge(String name){
         super(name);
@@ -42,7 +42,7 @@ public class BatchDumpBridge extends ItemBridge{
         if(transportTime <= 0f){
             if(speed < 0f){
                 transportTime = 2f;
-                Log.warn("[BatchDumpBridge] Block '@' has neither transportTime nor speed configured. " + "Fallback to transportTime=2f (30 items/s). Please set one of them explicitly.", name);
+                Log.err("[BatchDumpBridge] Block '@' has neither transportTime nor speed configured. " + "Fallback to transportTime=2f (30 items/s). Please set one of them explicitly.", name);
             }else{
                 transportTime = (speed == 0f) ? Float.MAX_VALUE : 1f / speed;
             }

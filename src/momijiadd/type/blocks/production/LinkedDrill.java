@@ -1,4 +1,4 @@
-package momijiadd.type;
+package momijiadd.type.blocks.production;
 
 import arc.Core;
 import arc.graphics.Blending;
@@ -32,6 +32,7 @@ import mindustry.world.Tile;
 import mindustry.world.blocks.environment.Floor;
 import mindustry.world.blocks.production.Drill;
 import mindustry.world.meta.*;
+import momijiadd.type.blocks.storage.LinkedBlock;
 
 import static mindustry.Vars.*;
 
@@ -77,12 +78,6 @@ public class LinkedDrill extends LinkedBlock{
     public TextureRegion rotatorRegion;
     public TextureRegion topRegion;
     public TextureRegion itemRegion;
-    /*
-    public @Load("@-rim") TextureRegion rimRegion;
-    public @Load("@-rotator") TextureRegion rotatorRegion;
-    public @Load("@-top") TextureRegion topRegion;
-    public @Load(value = "@-item", fallback = "drill-item-@size") TextureRegion itemRegion;
-    */
 
     public LinkedDrill(String name){
         super(name);
@@ -400,13 +395,13 @@ public class LinkedDrill extends LinkedBlock{
         }
 
         @Override
-        public byte version(){
-            return 1;
+        public boolean acceptItem(Building source, Item item){
+            return false;
         }
 
         @Override
-        public boolean acceptItem(Building source, Item item){
-            return false;
+        public byte version(){
+            return 1;
         }
 
         @Override
